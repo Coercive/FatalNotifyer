@@ -102,7 +102,7 @@ class FatalMailFormater {
 	 */
 	private function _htmlError() {
 		return "
-			<table border='1'>
+			<table>
 				<thead>
 					<th style='background-color: black;color: white; font-weight: bold'>ITEM</th>
 					<th style='background-color: black;color: white; font-weight: bold'>Description</th>

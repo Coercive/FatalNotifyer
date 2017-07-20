@@ -1,12 +1,11 @@
 <?php
 namespace Coercive\Utility\FatalNotifyer;
 
-use DateTime;
 use ErrorException;
 
 /**
  * FatalNotifyer
- * PHP Version 7
+ * PHP Version 7.1
  *
  * @version		1
  * @package 	Coercive\Utility\FatalNotifyer
@@ -19,53 +18,20 @@ use ErrorException;
 class FatalNotifyer {
 
 	/** @var bool Handlers */
-	static private 	$_aHandleError = [];
+	private $_aHandleError = [];
 
 	/** @var array */
-	static private $_aDests = [];
+	private $_aDests = [];
 
 	/** @var string */
-	static private $_sSubject = 'Coercive\\FatalNotifyer Reporting System';
-
-	/**
-	 * SCALE BY LOG
-	 *
-	 * Auto test error handling system
-	 * @link http://php.net/manual/fr/function.set-error-handler.php
-	 *
-	 * @param array $vect
-	 * @param int|float $scale
-	 * @return array|null
-	 */
-	static private function _scaleByLog($vect, $scale) {
-
-		if (!is_numeric($scale) || $scale <= 0) {
-			trigger_error("log(x) for x <= 0 is undefined, you used: scale = $scale", E_USER_ERROR);
-		}
-
-		if (!is_array($vect)) {
-			trigger_error("Incorrect entrie type, waiting for array of values", E_USER_WARNING);
-			return null;
-		}
-
-		$temp = [];
-		foreach($vect as $pos => $value) {
-			if (!is_numeric($value)) {
-				trigger_error("The position value $pos is not number, 0 (zero) used", E_USER_NOTICE);
-				$value = 0;
-			}
-			$temp[$pos] = log($scale) * $value;
-		}
-		return $temp;
-
-	}
+	private $_sSubject = 'Coercive\\FatalNotifyer Reporting System';
 
 	/**
 	 * DEFINE FATAL ERROR
 	 *
 	 * @return void
 	 */
-	static private function _defineFatalError() {
+	private function _defineFatalError() {
 		if(defined('E_FATAL')) { return; }
 		define('E_FATAL',  E_ERROR | E_USER_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR);
 	}
@@ -78,9 +44,10 @@ class FatalNotifyer {
 	 * @param string $sFileName
 	 * @param int $iLine
 	 * @param array $aContext [optional]
+	 * @return void
 	 * @throws ErrorException
 	 */
-	static private function _throwError($iSeverity, $sMessage, $sFileName, $iLine, $aContext = []) {
+	private function _throwError($iSeverity, $sMessage, $sFileName, $iLine, $aContext = []) {
 		switch ($iSeverity) {
 			/** Fatal run-time errors */
 			case E_ERROR:
@@ -134,114 +101,13 @@ class FatalNotifyer {
 	}
 
 	/**
-	 * HTML ERROR
-	 *
-	 * Transform error datas to HTML
-	 *
-	 * @param int $iSeverity
-	 * @param string $sMessage
-	 * @param string $sFileName
-	 * @param int $iLine
-	 * @return string
-	 */
-	static private function _htmlError($iSeverity, $sMessage, $sFileName, $iLine, $aContext) {
-		return "
-			<table>
-				<thead>
-					<th>Item</th>
-					<th>Description</th>
-				</thead>
-				<tbody>
-					<tr>
-						<th>Error</th>
-						<td><pre>$sMessage</pre></td>
-					</tr>
-					<tr>
-						<th>Errno</th>
-						<td><pre>$iSeverity</pre></td>
-					</tr>
-					<tr>
-						<th>File</th>
-						<td>$sFileName</td>
-					</tr>
-					<tr>
-						<th>Line</th>
-						<td>$iLine</td>
-					</tr>
-					<tr>
-						<th>Context</th>
-						<td>" . self::_array($aContext) . "</td>
-					</tr>
-					<tr>
-						<th>Trace</th>
-						<td><pre>" . self::getBacktrace() . "</pre></td>
-					</tr>
-				</tbody>
-			</table>";
-	}
-
-	/**
-	 * MAIL HEADER
-	 *
-	 * @return string
-	 */
-	static private function _getMailHeader() {
-		return
-			"MIME-Version: 1.0\r\n" .
-			"Content-type: text/html; charset=UTF-8\r\n";
-	}
-
-	/**
-	 * TO STRING
-	 *
-	 * @param array $aArray
-	 * @return string
-	 */
-	static private function _array($aArray) {
-		return '<pre>' . print_r($aArray, true) . '</pre>';
-	}
-
-	/**
-	 * HTML FULL MESSAGE
-	 *
-	 * @param string $sError
-	 * @return string
-	 */
-	static private function _htmlFullMessage($sError) {
-		$sDate = (new DateTime)->format('Y-m-d H:i:s');
-		return
-			"<b><u>DATE :</u></b> {$sDate}<br />" .
-			"<b><u>ERROR :</u></b><br />{$sError}" .
-			"<br /><hr /><br /><br />" .
-			"<b><u>SERVER :</u></b><br />" . self::_array($_SERVER) .
-			"<br /><hr /><br /><br />" .
-			"<b><u>GET :</u></b><br />" . self::_array($_GET) .
-			"<br /><hr /><br /><br />" .
-			"<b><u>POST :</u></b><br />" . self::_array($_POST) .
-			"<br /><hr /><br /><br />" .
-			"<b><u>FILE :</u></b><br />" . self::_array($_FILES) . "<br />";
-	}
-
-	/**
-	 * SEND EMAIL
-	 *
-	 * @param string $sBody
-	 * @return void
-	 */
-	static private function _mail($sBody) {
-		foreach (self::$_aDests as $sEmail) {
-			mail($sEmail, self::$_sSubject, $sBody, self::_getMailHeader());
-		}
-	}
-
-	/**
 	 * HANDLE ERROR
 	 *
 	 * @param int $iSeverity
 	 * @return bool
 	 */
-	static private function _isHandledError($iSeverity) {
-		foreach (self::$_aHandleError as $aHandler) {
+	private function _isHandledError($iSeverity) {
+		foreach ($this->_aHandleError as $aHandler) {
 			if($iSeverity & $aHandler['severity']) {
 				return $aHandler['handle'];
 			}
@@ -254,8 +120,8 @@ class FatalNotifyer {
 	 * @param int $iSeverity
 	 * @return bool
 	 */
-	static private function _isEmailableError($iSeverity) {
-		foreach (self::$_aHandleError as $aHandler) {
+	private function _isEmailableError($iSeverity) {
+		foreach ($this->_aHandleError as $aHandler) {
 			if($iSeverity & $aHandler['severity']) {
 				return $aHandler['mail'];
 			}
@@ -267,7 +133,7 @@ class FatalNotifyer {
 	 *
 	 * @return void
 	 */
-	static private function _handleError() {
+	private function _handleError() {
 
 		# Singleload
 		static $bAlreadyPrepared = false;
@@ -275,7 +141,7 @@ class FatalNotifyer {
 		$bAlreadyPrepared = true;
 
 		# Set error handler
-		set_error_handler([__CLASS__, 'errorHandler']);
+		set_error_handler([$this, 'errorHandler']);
 
 	}
 
@@ -284,7 +150,7 @@ class FatalNotifyer {
 	 *
 	 * @return void
 	 */
-	static private function _handleFatal() {
+	private function _handleFatal() {
 
 		# Singleload
 		static $bAlreadyPrepared = false;
@@ -292,19 +158,17 @@ class FatalNotifyer {
 		$bAlreadyPrepared = true;
 
 		# Set fatal shutdown handler
-		register_shutdown_function([__CLASS__, 'fatalHandler']);
+		register_shutdown_function([$this, 'fatalHandler']);
 
 	}
 
 	/**
-	 * INIT BASICS
-	 *
-	 * @return void
+	 * FatalNotifyer constructor.
 	 */
-	static public function init() {
+	public function __construct() {
 
-		# FATAL
-		self::_defineFatalError();
+		# const E_FATAL
+		$this->_defineFatalError();
 
 		# Report all errors
 		error_reporting(E_ALL | E_STRICT);
@@ -317,10 +181,11 @@ class FatalNotifyer {
 	 * PHP init display_errors status
 	 *
 	 * @param bool $bStatus
-	 * @return void
+	 * @return $this
 	 */
-	static public function displayError($bStatus) {
+	public function displayError($bStatus) {
 		ini_set('display_errors', $bStatus ? 'on' : 'off');
+		return $this;
 	}
 
 	/**
@@ -328,12 +193,12 @@ class FatalNotifyer {
 	 *
 	 * @return string
 	 */
-	static public function getBacktrace() {
+	public function getBacktrace() {
 		return (string) print_r(debug_backtrace(false), true);
 	}
 
 	/**
-	 * RESET ERROR REPORTING
+	 * STATIC : RESET ERROR REPORTING
 	 *
 	 * @return void
 	 */
@@ -349,7 +214,7 @@ class FatalNotifyer {
 
 		# Default no display and report all
 		ini_set('display_errors', 'off');
-		error_reporting(E_ALL);
+		error_reporting(E_ALL | E_STRICT);
 
 	}
 
@@ -364,21 +229,24 @@ class FatalNotifyer {
 	 * @return bool
 	 * @throws ErrorException
 	 */
-	static public function errorHandler($iSeverity, $sMessage, $sFileName, $iLine, $aContext = []) {
+	public function errorHandler($iSeverity, $sMessage, $sFileName, $iLine, $aContext = []) {
 
 		# This error code is not included in error_reporting
 		# Or error was suppressed with the '@' operator
 		if (!(error_reporting() & $iSeverity)) { return false; }
 
 		# Send mail if
-		if(self::_isEmailableError($iSeverity)) {
-			$sBody = self::_htmlFullMessage(self::_htmlError($iSeverity, $sMessage, $sFileName, $iLine, $aContext));
-			self::_mail($sBody);
+		if($this->_isEmailableError($iSeverity)) {
+			(new FatalMailFormater)
+				->setSubject($this->_sSubject)
+				->setEmails($this->_aDests)
+				->setError($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $this->getBacktrace())
+				->send();
 		}
 
 		# Throw if
 		if(self::_isHandledError($iSeverity)) {
-			self::_throwError($iSeverity, $sMessage, $sFileName, $iLine, $aContext);
+			$this->_throwError($iSeverity, $sMessage, $sFileName, $iLine, $aContext);
 		}
 
 		# Don't execute PHP internal error handler
@@ -391,9 +259,9 @@ class FatalNotifyer {
 	 *
 	 * Redirect to classical errorHandler
 	 *
-	 * @return void
+	 * @return bool
 	 */
-	static public function fatalHandler() {
+	public function fatalHandler() {
 
 		# Retrieve last error
 		$aError = error_get_last();
@@ -401,8 +269,11 @@ class FatalNotifyer {
 
 		# Handle fatal only
 		if(isset($aError['type']) && ($aError['type'] & E_FATAL)) {
-			static::errorHandler($aError['type'], $aError['message'] ?? '', $aError['file'] ?? '', $aError['line'] ?? '');
+			$this->errorHandler($aError['type'], $aError['message'] ?? '', $aError['file'] ?? '', $aError['line'] ?? '');
 		}
+
+		# Don't execute PHP internal error handler
+		return true;
 
 	}
 
@@ -413,24 +284,17 @@ class FatalNotifyer {
 	 */
 	static public function autoTest() {
 
-		# Generate sample errors
-		echo "----\nvector a\n";
-		$a = [2, 3, 'foo', 5.5, 43.3, 21.11];
-		print_r($a);
+		# (NOTICE)
+		echo "----\nNOTICE\n";
+		trigger_error('NOTICE', E_USER_NOTICE);
 
-		# (NOTICE) Number error
-		echo "----\nvector b - a notice (b = log(PI) * a)\n";
-		$b = self::_scaleByLog($a, M_PI);
-		print_r($b);
+		# (WARNING)
+		echo "----\nWARNING\n";
+		trigger_error('WARNING', E_USER_WARNING);
 
-		# (WARNING) Type error
-		echo "----\nvector c - a warning\n";
-		$c = self::_scaleByLog('not an array', 2.3);
-		var_dump($c); // NULL
-
-		# (FATAL) Logarythme of zero or negative
-		echo "----\nvector d - fatal error\n";
-		$d = self::_scaleByLog($a, -2.5);
+		# (FATAL)
+		echo "----\nFATAL\n";
+		trigger_error('FATAL', E_USER_ERROR);
 
 	}
 
@@ -438,28 +302,27 @@ class FatalNotifyer {
 	 * SET EMAIL SUBJECT
 	 *
 	 * @param string $sSubject
-	 * @return void
+	 * @return $this
 	 */
-	static public function setMailSubject($sSubject) {
-		self::$_sSubject = (string) $sSubject;
+	public function setMailSubject($sSubject) {
+		$this->_sSubject = (string) $sSubject;
+		return $this;
 	}
 
 	/**
 	 * ADD EMAIL DEST
 	 *
 	 * @param string $sEmail
-	 * @return bool
+	 * @return $this
 	 */
-	static public function addMailDest($sEmail) {
+	public function addMailDest($sEmail) {
 
 		# Skip on error
-		if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { return false; }
+		if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { return $this; }
 
 		# Set email
-		self::$_aDests[] = (string) $sEmail;
-
-		# Ok status
-		return true;
+		$this->_aDests[] = (string) $sEmail;
+		return $this;
 
 	}
 
@@ -471,14 +334,17 @@ class FatalNotifyer {
 	 * @param bool $bSendByMail [optional]
 	 * @return void
 	 */
-	static public function registerError($iSeverity, $bHandleError = false, $bSendByMail = false) {
+	public function registerError($iSeverity, $bHandleError = false, $bSendByMail = false) {
 
 		# SET SPECIFIC HANDLER
-		self::$_aHandleError[] = ['severity' => $iSeverity, 'handle' => (bool) $bHandleError, 'mail' => (bool) $bSendByMail];
+		$this->_aHandleError[] = ['severity' => $iSeverity, 'handle' => (bool) $bHandleError, 'mail' => (bool) $bSendByMail];
 
 		# SET HANDLERS
-		if($iSeverity & E_FATAL) { self::_handleFatal(); }
-		else { self::_handleError(); }
+		if($iSeverity & E_FATAL) { $this->_handleFatal(); }
+		else { $this->_handleError(); }
+
+		# Maintain chainability
+		return $this;
 
 	}
 

@@ -2,6 +2,19 @@
 namespace Coercive\Utility\FatalNotifyer;
 
 use ErrorException;
+use Coercive\Utility\FatalNotifyer\Exceptions\CompileErrorException;
+use Coercive\Utility\FatalNotifyer\Exceptions\CoreErrorException;
+use Coercive\Utility\FatalNotifyer\Exceptions\CoreWarningException;
+use Coercive\Utility\FatalNotifyer\Exceptions\DeprecatedException;
+use Coercive\Utility\FatalNotifyer\Exceptions\NoticeException;
+use Coercive\Utility\FatalNotifyer\Exceptions\ParseException;
+use Coercive\Utility\FatalNotifyer\Exceptions\RecoverableErrorException;
+use Coercive\Utility\FatalNotifyer\Exceptions\StrictException;
+use Coercive\Utility\FatalNotifyer\Exceptions\UserDeprecatedException;
+use Coercive\Utility\FatalNotifyer\Exceptions\UserErrorException;
+use Coercive\Utility\FatalNotifyer\Exceptions\UserNoticeException;
+use Coercive\Utility\FatalNotifyer\Exceptions\UserWarningException;
+use Coercive\Utility\FatalNotifyer\Exceptions\WarningException;
 
 /**
  * FatalNotifyer
@@ -17,7 +30,7 @@ use ErrorException;
  */
 class FatalNotifyer {
 
-	/** @var bool Handlers */
+	/** @var array Handlers */
 	private $_aHandleError = [];
 
 	/** @var array */
@@ -54,46 +67,46 @@ class FatalNotifyer {
 				throw new ErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Run-time warnings (non-fatal errors) */
 			case E_WARNING:
-				throw new Exceptions\WarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new WarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Compile-time parse errors */
 			case E_PARSE:
-				throw new Exceptions\ParseException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new ParseException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Run-time notices */
 			case E_NOTICE:
-				throw new Exceptions\NoticeException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new NoticeException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Fatal errors that occur during PHP's initial startup */
 			case E_CORE_ERROR:
-				throw new Exceptions\CoreErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new CoreErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Warnings (non-fatal errors) that occur during PHP's initial startup */
 			case E_CORE_WARNING:
-				throw new Exceptions\CoreWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new CoreWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Fatal compile-time errors (Zend) */
 			case E_COMPILE_ERROR:
-				throw new Exceptions\CompileErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new CompileErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Compile-time warnings (non-fatal errors) */
 			case E_COMPILE_WARNING:
-				throw new Exceptions\CoreWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new CoreWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** User-generated error message */
 			case E_USER_ERROR:
-				throw new Exceptions\UserErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new UserErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** User-generated warning message */
 			case E_USER_WARNING:
-				throw new Exceptions\UserWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new UserWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** User-generated notice message */
 			case E_USER_NOTICE:
-				throw new Exceptions\UserNoticeException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new UserNoticeException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** PHP suggest changes to your code */
 			case E_STRICT:
-				throw new Exceptions\StrictException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new StrictException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Catchable fatal error */
 			case E_RECOVERABLE_ERROR:
-				throw new Exceptions\RecoverableErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new RecoverableErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Run-time notices */
 			case E_DEPRECATED:
-				throw new Exceptions\DeprecatedException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new DeprecatedException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** User-generated warning message */
 			case E_USER_DEPRECATED:
-				throw new Exceptions\UserDeprecatedException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new UserDeprecatedException($sMessage, 0, $iSeverity, $sFileName, $iLine);
 			/** Unknown error */
 			default:
 				throw new ErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
@@ -112,6 +125,7 @@ class FatalNotifyer {
 				return $aHandler['handle'];
 			}
 		}
+		return false;
 	}
 
 	/**
@@ -126,6 +140,7 @@ class FatalNotifyer {
 				return $aHandler['mail'];
 			}
 		}
+		return false;
 	}
 
 	/**
@@ -265,7 +280,7 @@ class FatalNotifyer {
 
 		# Retrieve last error
 		$aError = error_get_last();
-		if(!$aError) { return; }
+		if(!$aError) { return false; }
 
 		# Handle fatal only
 		if(isset($aError['type']) && ($aError['type'] & E_FATAL)) {
@@ -332,7 +347,7 @@ class FatalNotifyer {
 	 * @param int $iSeverity
 	 * @param bool $bHandleError [optional]
 	 * @param bool $bSendByMail [optional]
-	 * @return void
+	 * @return $this
 	 */
 	public function registerError($iSeverity, $bHandleError = false, $bSendByMail = false) {
 

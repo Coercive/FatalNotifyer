@@ -143,7 +143,7 @@ class FatalMailFormater {
 	 */
 	private function _htmlFullMessage() {
 		return
-			"<b><u>DATE :</u></b><br />{$this->sDate}<br /><br />" .
+			"<b><u>DATE :</u></b><br />{$this->_sDate}<br /><br />" .
 			"<b><u>ERROR :</u></b><br />{$this->_htmlError()}" .
 			'<br /><hr /><br /><br />' .
 			'<b><u>SERVER :</u></b><br /><div style="background-color:#f0f0f0">' . $this->_array($_SERVER) . '</div>' .
@@ -208,11 +208,10 @@ class FatalMailFormater {
 	/**
 	 * SEND EMAIL
 	 *
-	 * @param string $sBody
 	 * @return $this
 	 */
 	public function send() {
-		foreach (self::$_aDests as $sEmail) {
+		foreach ($this->_aEmails as $sEmail) {
 			mail($sEmail, $this->_sSubject, $this->_htmlFullMessage(), $this->_getMailHeader());
 		}
 		return $this;

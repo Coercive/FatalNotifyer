@@ -104,32 +104,32 @@ class FatalMailFormater {
 		return "
 			<table border='1'>
 				<thead>
-					<th>Item</th>
-					<th>Description</th>
+					<th style='background-color: black;color: white; font-weight: bold'>ITEM</th>
+					<th style='background-color: black;color: white; font-weight: bold'>Description</th>
 				</thead>
 				<tbody>
 					<tr>
-						<th>Error</th>
+						<th style='background-color: black;color: white; font-weight: bold'>Error</th>
 						<td><pre>{$this->_colorize($this->_sMessage)}</pre></td>
 					</tr>
 					<tr>
-						<th>Errno</th>
+						<th style='background-color: black;color: white; font-weight: bold'>Errno</th>
 						<td><pre>$this->_iSeverity</pre></td>
 					</tr>
 					<tr>
-						<th>File</th>
+						<th style='background-color: black;color: white; font-weight: bold'>File</th>
 						<td style='background-color:yellowgreen;font-weight:bold;color:black'>$this->_sFileName</td>
 					</tr>
 					<tr>
-						<th>Line</th>
+						<th style='background-color: black;color: white; font-weight: bold'>Line</th>
 						<td>$this->_iLine</td>
 					</tr>
 					<tr>
-						<th>Context</th>
+						<th style='background-color: black;color: white; font-weight: bold'>Context</th>
 						<td style='background-color: #e8e8e8'>{$this->_array($this->_colorize($this->_aContext))}</td>
 					</tr>
 					<tr>
-						<th>Trace</th>
+						<th style='background-color: black;color: white; font-weight: bold'>Trace</th>
 						<td style='background-color: #d3d3d3'><pre>{$this->_colorize($this->_sBacktrace)}</pre></td>
 					</tr>
 				</tbody>

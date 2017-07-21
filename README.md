@@ -1,7 +1,7 @@
 Coercive FatalNotifyer Utility
 ==============================
 
-IN WORK
+This class allows you to manage your site's errors with an internal system of exception and notification by email.
 
 Get
 ---

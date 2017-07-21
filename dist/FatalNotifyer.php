@@ -33,7 +33,7 @@ class FatalNotifyer {
 	/** @var array Handlers */
 	private $_aHandleError = [];
 
-	/** @var array */
+	/** @var array Destinatory */
 	private $_aDests = [];
 
 	/** @var string */
@@ -120,24 +120,9 @@ class FatalNotifyer {
 	 * @return bool
 	 */
 	private function _isHandledError($iSeverity) {
-		foreach ($this->_aHandleError as $aHandler) {
-			if($iSeverity & $aHandler['severity']) {
-				return $aHandler['handle'];
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * EMAILABLE ERROR
-	 *
-	 * @param int $iSeverity
-	 * @return bool
-	 */
-	private function _isEmailableError($iSeverity) {
-		foreach ($this->_aHandleError as $aHandler) {
-			if($iSeverity & $aHandler['severity']) {
-				return $aHandler['mail'];
+		foreach ($this->_aHandleError as $iErrorType) {
+			if($iSeverity & $iErrorType) {
+				return true;
 			}
 		}
 		return false;
@@ -251,12 +236,14 @@ class FatalNotifyer {
 		if (!(error_reporting() & $iSeverity)) { return false; }
 
 		# Send mail if
-		if($this->_isEmailableError($iSeverity)) {
-			(new FatalMailFormater)
-				->setSubject($this->_sSubject)
-				->setEmails($this->_aDests)
-				->setError($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $this->getBacktrace())
-				->send();
+		foreach($this->_aDests as $sEmail => $iErrorType) {
+			if($iErrorType & $iSeverity) {
+				(new FatalMailFormater)
+					->setSubject($this->_sSubject)
+					->setEmails(array_keys($this->_aDests))
+					->setError($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $this->getBacktrace())
+					->send();
+			}
 		}
 
 		# Throw if
@@ -325,18 +312,29 @@ class FatalNotifyer {
 	}
 
 	/**
-	 * ADD EMAIL DEST
+	 * ADD EMAIL
 	 *
-	 * @param string $sEmail
+	 * @param array|string $mEmails
+	 * @param int $iType [optional]
 	 * @return $this
 	 */
-	public function addMailDest($sEmail) {
+	public function mail($mEmails, $iType = E_ALL | E_STRICT) {
 
-		# Skip on error
-		if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { return $this; }
+		# Emails list
+		if(is_string($mEmails)) { $mEmails = [$mEmails]; }
 
-		# Set email
-		$this->_aDests[] = (string) $sEmail;
+		# Add Process
+		foreach ($mEmails as $sEmail) {
+
+			# Skip on error
+			if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { continue; }
+
+			# Set email
+			$this->_aDests[(string) $sEmail] = $iType;
+
+		}
+
+		# Maintain chainability
 		return $this;
 
 	}
@@ -344,19 +342,17 @@ class FatalNotifyer {
 	/**
 	 * REGISTER ERROR HANDLER
 	 *
-	 * @param int $iSeverity
-	 * @param bool $bHandleError [optional]
-	 * @param bool $bSendByMail [optional]
+	 * @param int $iSeverity [optional]
 	 * @return $this
 	 */
-	public function registerError($iSeverity, $bHandleError = false, $bSendByMail = false) {
+	public function register($iSeverity = E_ALL | E_STRICT) {
 
 		# SET SPECIFIC HANDLER
-		$this->_aHandleError[] = ['severity' => $iSeverity, 'handle' => (bool) $bHandleError, 'mail' => (bool) $bSendByMail];
+		$this->_aHandleError[] = $iSeverity;
 
 		# SET HANDLERS
+		$this->_handleError();
 		if($iSeverity & E_FATAL) { $this->_handleFatal(); }
-		else { $this->_handleError(); }
 
 		# Maintain chainability
 		return $this;

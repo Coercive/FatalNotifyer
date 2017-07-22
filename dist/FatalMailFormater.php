@@ -126,7 +126,7 @@ class FatalMailFormater {
 					</tr>
 					<tr>
 						<th style='background-color: black;color: white; font-weight: bold'>Context</th>
-						<td style='background-color: #e8e8e8'>{$this->_array($this->_colorize($this->_aContext))}</td>
+						<td style='background-color: #e8e8e8'>{$this->_colorize($this->_array($this->_aContext))}</td>
 					</tr>
 					<tr>
 						<th style='background-color: black;color: white; font-weight: bold'>Trace</th>

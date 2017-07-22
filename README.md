@@ -40,10 +40,62 @@ $oFatal->register(E_FATAL);
 	// E_USER_ERROR:, E_USER_WARNING, E_USER_NOTICE, E_STRICT,
 	// E_RECOVERABLE_ERROR, E_DEPRECATED, E_USER_DEPRECATED
 
+# Save type error in personal file
+$oFatal->save('/my/personal/log/directory/fatal', E_FATAL);
+$oFatal->save('/my/personal/log/directory/notice', E_NOTICE);
+// See after for explore errors datas
+
+
 # You can try an autotest for 3 errors type
 FatalNotifyer::autoTest();
 
 # And you have a reset function
 FatalNotifyer::reset();
+
+```
+
+Explore error log
+-----------------
+```php
+use Coercive\Utility\FatalNotifyer\FatalLog;
+
+# For example, you can imagine an ajax system that retrieve error list ...
+
+# Load
+$oLog = new FatalLog('/my/personal/log/directory/fatal');
+
+# Retreive days list directories
+# ['2017-07-22', '2017-07-21', '2017-07-20', ...]
+
+$aDays = $oLog->getDayList();
+
+# Retreive file list by directories
+# ['2017-07-22' => ['15_14_57', '15_14_58', ...], ...]
+
+$aLists = [];
+foreach ($aDays as $sDay) {
+	$aLists[$sDay] = $oLog->getFileList($sDay);
+}
+
+# Retrieve one (example)
+
+$oFatalBazooka->getOne("/my/personal/log/directory/fatal/2017-07-22/15_14_57");
+
+# Loop retrieve (example)
+
+$aErrors = [];
+foreach ($aLists as $sDay => $aFiles) {
+	foreach ($aFiles as $sFile) {
+		$aErrors[$sDay . '@' . $sFile] = $oFatalBazooka->getOne("/home/horus_coercive/log/dev/test/$sDay/$sFile");
+	}
+}
+
+# See results
+
+echo '<pre>';
+var_dump($aDays);
+var_dump($aLists);
+var_dump($aErrors);
+echo '</pre>';
 
 ```

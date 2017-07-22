@@ -33,6 +33,9 @@ class FatalNotifyer {
 	/** @var array Handlers */
 	private $_aHandleError = [];
 
+	/** @var array Error Save Datas */
+	private $_aSaveError = [];
+
 	/** @var array Destinatory */
 	private $_aDests = [];
 
@@ -246,6 +249,14 @@ class FatalNotifyer {
 			}
 		}
 
+		# Save if
+		foreach($this->_aSaveError as $sPath => $iErrorType) {
+			if($iErrorType & $iSeverity) {
+				(new FatalLog($sPath))
+					->save($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $this->getBacktrace());
+			}
+		}
+
 		# Throw if
 		if(self::_isHandledError($iSeverity)) {
 			$this->_throwError($iSeverity, $sMessage, $sFileName, $iLine, $aContext);
@@ -353,6 +364,23 @@ class FatalNotifyer {
 		# SET HANDLERS
 		$this->_handleError();
 		if($iSeverity & E_FATAL) { $this->_handleFatal(); }
+
+		# Maintain chainability
+		return $this;
+
+	}
+
+	/**
+	 * SAVE
+	 *
+	 * @param string $sDirectoryPath
+	 * @param int $iSeverity [optional]
+	 * @return $this
+	 */
+	public function save($sDirectoryPath, $iSeverity = E_ALL | E_STRICT) {
+
+		# SET SPECIFIC SAVE
+		$this->_aSaveError[$sDirectoryPath] = $iSeverity;
 
 		# Maintain chainability
 		return $this;

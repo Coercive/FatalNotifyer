@@ -72,7 +72,7 @@ class FatalLog {
 	 * @return string
 	 */
 	private function _getLogSeparator() {
-		return "----------LOGSEPARATOR_". __CLASS__ . "_##########\r\n";
+		return "##########----------LOGSEPARATOR----------##########\r\n";
 	}
 
 	/**

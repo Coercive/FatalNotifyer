@@ -90,7 +90,7 @@ $oFatalBazooka->getOne("/my/personal/log/directory/fatal/2017-07-22/15_14_57");
 $aErrors = [];
 foreach ($aLists as $sDay => $aFiles) {
 	foreach ($aFiles as $sFile) {
-		$aErrors[$sDay . '@' . $sFile] = $oFatalBazooka->getOne("/home/horus_coercive/log/dev/test/$sDay/$sFile");
+		$aErrors[$sDay . '@' . $sFile] = $oFatalBazooka->getOne("/my/personal/log/directory/fatal/$sDay/$sFile");
 	}
 }
 

@@ -67,6 +67,16 @@ class FatalLog {
 	}
 
 	/**
+	 * TO STRING
+	 *
+	 * @param array $aArray
+	 * @return string
+	 */
+	private function _array($aArray) {
+		return '<pre>' . print_r($aArray, true) . '</pre>';
+	}
+
+	/**
 	 * GET LOG SEPARATOR
 	 *
 	 * @return string
@@ -95,7 +105,13 @@ class FatalLog {
 				'filename' => $sFileName,
 				'line' => $iLine,
 				'context' => $aContext,
-				'backtrace' => $sBacktrace
+				'backtrace' => $sBacktrace,
+
+				'GET' => $this->_array($_SERVER),
+				'POST' => $this->_array($_POST),
+				'FILE' => $this->_array($_FILES),
+				'SERVER' => $this->_array($_SERVER),
+				'SESSION' => $this->_array($_SESSION)
 			]);
 		}
 		catch (Exception $oException) {

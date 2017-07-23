@@ -165,7 +165,9 @@ class FatalMailFormater {
 			'<br /><hr /><br /><br />' .
 			'<b><u>POST :</u></b><br /><div style="background-color:#e6e6e6">' . $this->_array($_POST) . '</div>' .
 			'<br /><hr /><br /><br />' .
-			'<b><u>FILE :</u></b><br /><div style="background-color:#e1e1e1">' . $this->_array($_FILES) . '</div>';
+			'<b><u>FILE :</u></b><br /><div style="background-color:#e1e1e1">' . $this->_array($_FILES) . '</div>' .
+			'<br /><hr /><br /><br />' .
+			'<b><u>SESSION :</u></b><br /><div style="background-color:#d4d4d4">' . $this->_array($_SESSION) . '</div>';
 	}
 
 	/**

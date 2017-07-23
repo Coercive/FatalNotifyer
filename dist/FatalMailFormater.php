@@ -29,6 +29,9 @@ class FatalMailFormater {
 		'notice' => 'yellow',
 	];
 
+	/** @var bool */
+	private $_bNotifyOnly = false;
+
 	/** @var string */
 	private $_sDate = '';
 
@@ -142,6 +145,16 @@ class FatalMailFormater {
 	 * @return string
 	 */
 	private function _htmlFullMessage() {
+
+		# Notify Only
+		if($this->_bNotifyOnly) {
+			return
+				"<b><u>DATE :</u></b><br />{$this->_sDate}<br /><br />" .
+				'<br /><hr /><br /><br />' .
+				"<b><u>ERROR :</u></b><br />{$this->_sMessage}<br />";
+		}
+
+		# Full email
 		return
 			"<b><u>DATE :</u></b><br />{$this->_sDate}<br /><br />" .
 			"<b><u>ERROR :</u></b><br />{$this->_htmlError()}" .
@@ -181,6 +194,18 @@ class FatalMailFormater {
 	 */
 	public function setEmails($aEmails) {
 		$this->_aEmails = (array) $aEmails;
+		return $this;
+	}
+
+	/**
+	 * SET NOTIFY ONLY
+	 *
+	 * @param string $sMessage
+	 * @return $this
+	 */
+	public function setNotifyOnly($sMessage) {
+		$this->_bNotifyOnly = (bool) true;
+		$this->_sMessage = (string) $sMessage;
 		return $this;
 	}
 

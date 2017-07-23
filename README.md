@@ -32,6 +32,10 @@ $oFatal->mail('email_4@email.email', E_COMPILE_ERROR);
 $oFatal->mail('email_5@email.email', E_NOTICE | E_USER_NOTICE);
 	// ...
 
+# Or just notify (not the full backtrace but short message)
+$oFatal->notify('email_1@email.email');
+$oFatal->notify(['email_2@email.email', 'email_3@email.email'], E_NOTICE | E_USER_NOTICE);
+
 # Register type error for internal class handle
 $oFatal->register(E_FATAL);
 

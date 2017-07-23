@@ -36,6 +36,9 @@ class FatalNotifyer {
 	/** @var array Error Save Datas */
 	private $_aSaveError = [];
 
+	/** @var array Email Notify */
+	private $_aNotifyDests = [];
+
 	/** @var array Destinatory */
 	private $_aDests = [];
 
@@ -50,6 +53,49 @@ class FatalNotifyer {
 	private function _defineFatalError() {
 		if(defined('E_FATAL')) { return; }
 		define('E_FATAL',  E_ERROR | E_USER_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR);
+	}
+
+	/**
+	 * ERROR LEVEL TO TEXT
+	 *
+	 * @param int $iSeverity
+	 * @return string
+	 */
+	private function _errorLevelToText($iSeverity) {
+		switch ($iSeverity) {
+			/** Fatal run-time errors */
+			case E_ERROR: return "E_ERROR ($iSeverity) : Fatal run-time errors";
+			/** Run-time warnings (non-fatal errors) */
+			case E_WARNING: return "E_WARNING ($iSeverity) : Run-time warnings (non-fatal errors)";
+			/** Compile-time parse errors */
+			case E_PARSE: return "E_PARSE ($iSeverity) : Compile-time parse errors";
+			/** Run-time notices */
+			case E_NOTICE: return "E_NOTICE ($iSeverity) : Run-time notices";
+			/** Fatal errors that occur during PHP's initial startup */
+			case E_CORE_ERROR: return "E_CORE_ERROR ($iSeverity) : Fatal errors that occur during PHP's initial startup";
+			/** Warnings (non-fatal errors) that occur during PHP's initial startup */
+			case E_CORE_WARNING: return "E_CORE_WARNING ($iSeverity) : Warnings (non-fatal errors) that occur during PHP's initial startup";
+			/** Fatal compile-time errors (Zend) */
+			case E_COMPILE_ERROR: return "E_COMPILE_ERROR ($iSeverity) : Fatal compile-time errors (Zend)";
+			/** Compile-time warnings (non-fatal errors) */
+			case E_COMPILE_WARNING: return "E_COMPILE_WARNING ($iSeverity) : Compile-time warnings (non-fatal errors)";
+			/** User-generated error message */
+			case E_USER_ERROR: return "E_USER_ERROR ($iSeverity) : User-generated error message";
+			/** User-generated warning message */
+			case E_USER_WARNING: return "E_USER_WARNING ($iSeverity) : User-generated warning message";
+			/** User-generated notice message */
+			case E_USER_NOTICE: return "E_USER_NOTICE ($iSeverity) : User-generated notice message";
+			/** PHP suggest changes to your code */
+			case E_STRICT: return "E_STRICT ($iSeverity) : PHP suggest changes to your code";
+			/** Catchable fatal error */
+			case E_RECOVERABLE_ERROR: return "E_RECOVERABLE_ERROR ($iSeverity) : Catchable fatal error";
+			/** Run-time notices */
+			case E_DEPRECATED: return "E_DEPRECATED ($iSeverity) : Run-time notices";
+			/** User-generated warning message */
+			case E_USER_DEPRECATED: return "E_USER_DEPRECATED ($iSeverity) : User-generated warning message";
+			/** Unknown error */
+			default: return "Undefined ($iSeverity) : Unknown error";
+		}
 	}
 
 	/**
@@ -238,6 +284,17 @@ class FatalNotifyer {
 		# Or error was suppressed with the '@' operator
 		if (!(error_reporting() & $iSeverity)) { return false; }
 
+		# Send notify email if
+		foreach($this->_aDests as $sEmail => $iErrorType) {
+			if($iErrorType & $iSeverity) {
+				(new FatalMailFormater)
+					->setSubject($this->_sSubject)
+					->setEmails(array_keys($this->_aDests))
+					->setNotifyOnly($this->_errorLevelToText($iSeverity))
+					->send();
+			}
+		}
+
 		# Send mail if
 		foreach($this->_aDests as $sEmail => $iErrorType) {
 			if($iErrorType & $iSeverity) {
@@ -381,6 +438,34 @@ class FatalNotifyer {
 
 		# SET SPECIFIC SAVE
 		$this->_aSaveError[$sDirectoryPath] = $iSeverity;
+
+		# Maintain chainability
+		return $this;
+
+	}
+
+	/**
+	 * NOTIFY EMAIL ERRORS
+	 *
+	 * @param array|string $mEmails
+	 * @param int $iType [optional]
+	 * @return $this
+	 */
+	public function notify($mEmails, $iType = E_ALL | E_STRICT) {
+
+		# Emails list
+		if(is_string($mEmails)) { $mEmails = [$mEmails]; }
+
+		# Add Process
+		foreach ($mEmails as $sEmail) {
+
+			# Skip on error
+			if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { continue; }
+
+			# Set email
+			$this->_aNotifyDests[(string) $sEmail] = $iType;
+
+		}
 
 		# Maintain chainability
 		return $this;

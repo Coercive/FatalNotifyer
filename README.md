@@ -83,14 +83,14 @@ foreach ($aDays as $sDay) {
 
 # Retrieve one (example)
 
-$oFatalBazooka->getOne("/my/personal/log/directory/fatal/2017-07-22/15_14_57");
+$oLog->getOne("/my/personal/log/directory/fatal/2017-07-22/15_14_57");
 
 # Loop retrieve (example)
 
 $aErrors = [];
 foreach ($aLists as $sDay => $aFiles) {
 	foreach ($aFiles as $sFile) {
-		$aErrors[$sDay . '@' . $sFile] = $oFatalBazooka->getOne("/my/personal/log/directory/fatal/$sDay/$sFile");
+		$aErrors[$sDay . '@' . $sFile] = $oLog->getOne("/my/personal/log/directory/fatal/$sDay/$sFile");
 	}
 }
 

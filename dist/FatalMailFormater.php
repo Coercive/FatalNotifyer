@@ -159,7 +159,7 @@ class FatalMailFormater {
 			"<b><u>DATE :</u></b><br />{$this->_sDate}<br /><br />" .
 			"<b><u>ERROR :</u></b><br />{$this->_htmlError()}" .
 			'<br /><hr /><br /><br />' .
-			'<b><u>SERVER :</u></b><br /><div style="background-color:#f0f0f0">' . $this->_array($_SERVER) ?? [] . '</div>' .
+			'<b><u>SERVER :</u></b><br /><div style="background-color:#f0f0f0">' . $this->_array($_SERVER ?? []) . '</div>' .
 			'<br /><hr /><br /><br />' .
 			'<b><u>GET :</u></b><br /><div style="background-color:#ebebeb">' . $this->_array($_GET ?? []) . '</div>' .
 			'<br /><hr /><br /><br />' .

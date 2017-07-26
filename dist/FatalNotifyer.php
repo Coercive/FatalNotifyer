@@ -212,6 +212,22 @@ class FatalNotifyer {
 	}
 
 	/**
+	 * INIT HANDLER
+	 *
+	 * @param int $iSeverity
+	 * @return void
+	 */
+	private function _initHandler($iSeverity) {
+
+		# Basic levels
+		$this->_handleError();
+
+		# Fatal level
+		if($iSeverity & E_FATAL) { $this->_handleFatal(); }
+
+	}
+
+	/**
 	 * FatalNotifyer constructor.
 	 */
 	public function __construct() {
@@ -285,11 +301,11 @@ class FatalNotifyer {
 		if (!(error_reporting() & $iSeverity)) { return false; }
 
 		# Send notify email if
-		foreach($this->_aDests as $sEmail => $iErrorType) {
+		foreach($this->_aNotifyDests as $sEmail => $iErrorType) {
 			if($iErrorType & $iSeverity) {
 				(new FatalMailFormater)
 					->setSubject($this->_sSubject)
-					->setEmails(array_keys($this->_aDests))
+					->setEmails(array_keys($this->_aNotifyDests))
 					->setNotifyOnly($this->_errorLevelToText($iSeverity))
 					->send();
 			}
@@ -383,10 +399,10 @@ class FatalNotifyer {
 	 * ADD EMAIL
 	 *
 	 * @param array|string $mEmails
-	 * @param int $iType [optional]
+	 * @param int $iSeverity [optional]
 	 * @return $this
 	 */
-	public function mail($mEmails, $iType = E_ALL | E_STRICT) {
+	public function mail($mEmails, $iSeverity = E_ALL | E_STRICT) {
 
 		# Emails list
 		if(is_string($mEmails)) { $mEmails = [$mEmails]; }
@@ -398,9 +414,12 @@ class FatalNotifyer {
 			if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { continue; }
 
 			# Set email
-			$this->_aDests[(string) $sEmail] = $iType;
+			$this->_aDests[(string) $sEmail] = $iSeverity;
 
 		}
+
+		# SET HANDLERS
+		$this->_initHandler($iSeverity);
 
 		# Maintain chainability
 		return $this;
@@ -419,8 +438,7 @@ class FatalNotifyer {
 		$this->_aHandleError[] = $iSeverity;
 
 		# SET HANDLERS
-		$this->_handleError();
-		if($iSeverity & E_FATAL) { $this->_handleFatal(); }
+		$this->_initHandler($iSeverity);
 
 		# Maintain chainability
 		return $this;
@@ -439,6 +457,9 @@ class FatalNotifyer {
 		# SET SPECIFIC SAVE
 		$this->_aSaveError[$sDirectoryPath] = $iSeverity;
 
+		# SET HANDLERS
+		$this->_initHandler($iSeverity);
+
 		# Maintain chainability
 		return $this;
 
@@ -448,10 +469,10 @@ class FatalNotifyer {
 	 * NOTIFY EMAIL ERRORS
 	 *
 	 * @param array|string $mEmails
-	 * @param int $iType [optional]
+	 * @param int $iSeverity [optional]
 	 * @return $this
 	 */
-	public function notify($mEmails, $iType = E_ALL | E_STRICT) {
+	public function notify($mEmails, $iSeverity = E_ALL | E_STRICT) {
 
 		# Emails list
 		if(is_string($mEmails)) { $mEmails = [$mEmails]; }
@@ -463,9 +484,12 @@ class FatalNotifyer {
 			if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { continue; }
 
 			# Set email
-			$this->_aNotifyDests[(string) $sEmail] = $iType;
+			$this->_aNotifyDests[(string) $sEmail] = $iSeverity;
 
 		}
+
+		# SET HANDLERS
+		$this->_initHandler($iSeverity);
 
 		# Maintain chainability
 		return $this;

@@ -1,6 +1,7 @@
 <?php
 namespace Coercive\Utility\FatalNotifyer;
 
+use Closure;
 use ErrorException;
 use Coercive\Utility\FatalNotifyer\Exceptions\CompileErrorException;
 use Coercive\Utility\FatalNotifyer\Exceptions\CoreErrorException;
@@ -18,20 +19,21 @@ use Coercive\Utility\FatalNotifyer\Exceptions\WarningException;
 
 /**
  * FatalNotifyer
- * PHP Version 7.1
  *
- * @version		1
  * @package 	Coercive\Utility\FatalNotifyer
  * @link		https://github.com/Coercive/FatalNotifyer
  *
  * @author  	Anthony Moral <contact@coercive.fr>
- * @copyright   (c) 2017 - 2018 Anthony Moral
+ * @copyright   (c) 2018 Anthony Moral
  * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
  */
-class FatalNotifyer {
-
+class FatalNotifyer
+{
 	/** @var array Handlers */
 	private $_aHandleError = [];
+
+	/** @var array Custom */
+	private $custom = [];
 
 	/** @var array Error Save Datas */
 	private $_aSaveError = [];
@@ -235,9 +237,6 @@ class FatalNotifyer {
 		# const E_FATAL
 		$this->_defineFatalError();
 
-		# Report all errors
-		error_reporting(E_ALL | E_STRICT);
-
 	}
 
 	/**
@@ -330,8 +329,18 @@ class FatalNotifyer {
 			}
 		}
 
-		# Throw if
-		if(self::_isHandledError($iSeverity)) {
+		# Launch custom handler
+		if(array_key_exists($iSeverity, $this->custom)) {
+
+			# Exec closure
+			$this->custom[$iSeverity]($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $this->getBacktrace());
+
+			# Don't execute PHP internal error handler
+			return true;
+		}
+
+		# Throw if registered and no custom handler
+		if(self::_isHandledError($iSeverity) ) {
 			$this->_throwError($iSeverity, $sMessage, $sFileName, $iLine, $aContext);
 		}
 
@@ -427,12 +436,31 @@ class FatalNotifyer {
 	}
 
 	/**
+	 * CUSTOM ERROR HANDLER
+	 *
+	 * @param int $severity
+	 * @param Closure $handler
+	 * @return FatalNotifyer
+	 */
+	public function custom(int $severity, Closure $handler): FatalNotifyer
+	{
+		# Add severity custom handler
+		$this->custom[$severity] = $handler;
+
+		# Maintain chainability
+		return $this;
+	}
+
+	/**
 	 * REGISTER ERROR HANDLER
 	 *
 	 * @param int $iSeverity [optional]
 	 * @return $this
 	 */
 	public function register($iSeverity = E_ALL | E_STRICT) {
+
+		# Report errors
+		error_reporting($iSeverity);
 
 		# SET SPECIFIC HANDLER
 		$this->_aHandleError[] = $iSeverity;
@@ -495,5 +523,4 @@ class FatalNotifyer {
 		return $this;
 
 	}
-
 }

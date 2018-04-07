@@ -5,18 +5,16 @@ use DateTime;
 
 /**
  * FatalNotifyer
- * PHP Version 7.1
  *
- * @version		1
  * @package 	Coercive\Utility\FatalNotifyer
  * @link		https://github.com/Coercive/FatalNotifyer
  *
  * @author  	Anthony Moral <contact@coercive.fr>
- * @copyright   (c) 2017 - 2018 Anthony Moral
+ * @copyright   (c) 2018 Anthony Moral
  * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
  */
-class FatalMailFormater {
-
+class FatalMailFormater
+{
 	const COLORIZE = [
 		'array' => 'cyan',
 		'int' => 'cyan',
@@ -30,41 +28,42 @@ class FatalMailFormater {
 	];
 
 	/** @var bool */
-	private $_bNotifyOnly = false;
+	private $notify = false;
 
 	/** @var string */
-	private $_sDate = '';
+	private $date = '';
 
 	/** @var string */
-	private $_sSubject = '---';
+	private $subject = '---';
 
 	/** @var array */
-	private $_aEmails = [];
+	private $emails = [];
 
 	/** @var int - Error Severity */
-	private $_iSeverity = 0;
+	private $severity = 0;
 
 	/** @var string - Error Message */
-	private $_sMessage = '';
+	private $message = '';
 
 	/** @var string - Error Filename */
-	private $_sFileName = '';
+	private $fileName = '';
 
 	/** @var int - Error Line */
-	private $_iLine = 0;
+	private $line = 0;
 
 	/** @var array - Error Context */
-	private $_aContext = [];
+	private $context = [];
 
 	/** @var string - Error Backtrace */
-	private $_sBacktrace = '';
+	private $backtrace = '';
 
 	/**
 	 * MAIL HEADER
 	 *
 	 * @return string
 	 */
-	private function _getMailHeader() {
+	private function _getMailHeader(): string
+	{
 		return
 			"MIME-Version: 1.0\r\n" .
 			"Content-type: text/html; charset=UTF-8\r\n";
@@ -73,27 +72,26 @@ class FatalMailFormater {
 	/**
 	 * TO STRING
 	 *
-	 * @param array $aArray
+	 * @param array $array
 	 * @return string
 	 */
-	private function _array($aArray) {
-		return '<pre>' . print_r($aArray, true) . '</pre>';
+	private function printArray(array $array): string
+	{
+		return '<pre>' . print_r($array, true) . '</pre>';
 	}
 
 	/**
 	 * COLORIZE
 	 *
-	 * @param string $sString
-	 * @return mixed
+	 * @param string $string
+	 * @return string
 	 */
-	private function _colorize($sString) {
-
-		foreach (self::COLORIZE as $sItem => $sColor) {
-			$sString = preg_replace("`$sItem`i", "<span style='color:$sColor;font-weight:bold'>$sItem</span>", $sString);
+	private function colorize(string $string): string
+	{
+		foreach (self::COLORIZE as $item => $color) {
+			$string = preg_replace("`$item`i", "<span style='color:$color;font-weight:bold'>$item</span>", $string);
 		}
-
-		return $sString;
-
+		return $string;
 	}
 
 	/**
@@ -103,7 +101,8 @@ class FatalMailFormater {
 	 *
 	 * @return string
 	 */
-	private function _htmlError() {
+	private function htmlError():string
+	{
 		return "
 			<table>
 				<thead>
@@ -113,27 +112,27 @@ class FatalMailFormater {
 				<tbody>
 					<tr>
 						<th style='background-color: black;color: white; font-weight: bold'>Error</th>
-						<td><pre>{$this->_colorize($this->_sMessage)}</pre></td>
+						<td><pre>{$this->colorize($this->message)}</pre></td>
 					</tr>
 					<tr>
 						<th style='background-color: black;color: white; font-weight: bold'>Errno</th>
-						<td><pre>$this->_iSeverity</pre></td>
+						<td><pre>$this->severity</pre></td>
 					</tr>
 					<tr>
 						<th style='background-color: black;color: white; font-weight: bold'>File</th>
-						<td style='background-color:yellowgreen;font-weight:bold;color:black'>$this->_sFileName</td>
+						<td style='background-color:yellowgreen;font-weight:bold;color:black'>$this->fileName</td>
 					</tr>
 					<tr>
 						<th style='background-color: black;color: white; font-weight: bold'>Line</th>
-						<td>$this->_iLine</td>
+						<td>$this->line</td>
 					</tr>
 					<tr>
 						<th style='background-color: black;color: white; font-weight: bold'>Context</th>
-						<td style='background-color: #e8e8e8'>{$this->_colorize($this->_array($this->_aContext))}</td>
+						<td style='background-color: #e8e8e8'>{$this->colorize($this->printArray($this->context))}</td>
 					</tr>
 					<tr>
 						<th style='background-color: black;color: white; font-weight: bold'>Trace</th>
-						<td style='background-color: #d3d3d3'><pre>{$this->_colorize($this->_sBacktrace)}</pre></td>
+						<td style='background-color: #d3d3d3'><pre>{$this->colorize($this->backtrace)}</pre></td>
 					</tr>
 				</tbody>
 			</table>";
@@ -144,91 +143,96 @@ class FatalMailFormater {
 	 *
 	 * @return string
 	 */
-	private function _htmlFullMessage() {
-
+	private function htmlFullMessage(): string
+	{
 		# Notify Only
-		if($this->_bNotifyOnly) {
+		if($this->notify) {
 			return
-				"<b><u>DATE :</u></b><br />{$this->_sDate}<br /><br />" .
+				"<b><u>DATE :</u></b><br />{$this->date}<br /><br />" .
 				'<br /><hr /><br /><br />' .
-				"<b><u>ERROR :</u></b><br />{$this->_sMessage}<br />";
+				"<b><u>ERROR :</u></b><br />{$this->message}<br />";
 		}
 
 		# Full email
 		return
-			"<b><u>DATE :</u></b><br />{$this->_sDate}<br /><br />" .
-			"<b><u>ERROR :</u></b><br />{$this->_htmlError()}" .
+			"<b><u>DATE :</u></b><br />{$this->date}<br /><br />" .
+			"<b><u>ERROR :</u></b><br />{$this->htmlError()}" .
 			'<br /><hr /><br /><br />' .
-			'<b><u>SERVER :</u></b><br /><div style="background-color:#f0f0f0">' . $this->_array($_SERVER ?? []) . '</div>' .
+			'<b><u>SERVER :</u></b><br /><div style="background-color:#f0f0f0">' . $this->printArray($_SERVER ?? []) . '</div>' .
 			'<br /><hr /><br /><br />' .
-			'<b><u>GET :</u></b><br /><div style="background-color:#ebebeb">' . $this->_array($_GET ?? []) . '</div>' .
+			'<b><u>GET :</u></b><br /><div style="background-color:#ebebeb">' . $this->printArray($_GET ?? []) . '</div>' .
 			'<br /><hr /><br /><br />' .
-			'<b><u>POST :</u></b><br /><div style="background-color:#e6e6e6">' . $this->_array($_POST ?? []) . '</div>' .
+			'<b><u>POST :</u></b><br /><div style="background-color:#e6e6e6">' . $this->printArray($_POST ?? []) . '</div>' .
 			'<br /><hr /><br /><br />' .
-			'<b><u>FILE :</u></b><br /><div style="background-color:#e1e1e1">' . $this->_array($_FILES ?? []) . '</div>' .
+			'<b><u>FILE :</u></b><br /><div style="background-color:#e1e1e1">' . $this->printArray($_FILES ?? []) . '</div>' .
 			'<br /><hr /><br /><br />' .
-			'<b><u>SESSION :</u></b><br /><div style="background-color:#d4d4d4">' . $this->_array($_SESSION ?? []) . '</div>';
+			'<b><u>SESSION :</u></b><br /><div style="background-color:#d4d4d4">' . $this->printArray($_SESSION ?? []) . '</div>';
 	}
 
 	/**
 	 * FatalMailFormater constructor.
 	 */
-	public function __construct() {
-		$this->_sDate = (new DateTime)->format('Y-m-d H:i:s');
+	public function __construct()
+	{
+		$this->date = (new DateTime)->format('Y-m-d H:i:s');
 	}
 
 	/**
 	 * SET SUBJECT
 	 *
-	 * @param string $sSubject
+	 * @param string $subject
 	 * @return $this
 	 */
-	public function setSubject($sSubject) {
-		$this->_sSubject = (string) $sSubject;
+	public function setSubject(string $subject): FatalMailFormater
+	{
+		$this->subject = $subject;
 		return $this;
 	}
 
 	/**
 	 * SET EMAILS
 	 *
-	 * @param array $aEmails
+	 * @param array $emails
 	 * @return $this
 	 */
-	public function setEmails($aEmails) {
-		$this->_aEmails = (array) $aEmails;
+	public function setEmails(array $emails): FatalMailFormater
+	{
+		$this->emails = $emails;
 		return $this;
 	}
 
 	/**
 	 * SET NOTIFY ONLY
 	 *
-	 * @param string $sMessage
+	 * @param string $message
 	 * @return $this
 	 */
-	public function setNotifyOnly($sMessage) {
-		$this->_bNotifyOnly = (bool) true;
-		$this->_sMessage = (string) $sMessage;
+	public function setNotifyOnly(string $message): FatalMailFormater
+	{
+		$this->notify = true;
+		$this->message = $message;
 		return $this;
 	}
 
 	/**
 	 * SET ERROR
 	 *
-	 * @param int $iSeverity
-	 * @param string $sMessage
-	 * @param string $sFileName
-	 * @param int $iLine
-	 * @param array $aContext
-	 * @param string $sBacktrace
+	 * @param int $severity
+	 * @param string $message
+	 * @param string $fileName
+	 * @param int $line
+	 * @param array $context
+	 * @param string $backtrace
 	 * @return $this
 	 */
-	public function setError($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $sBacktrace) {
-		$this->_iSeverity = (int) $iSeverity;
-		$this->_sMessage = (string) $sMessage;
-		$this->_sFileName = (string) $sFileName;
-		$this->_iLine = (int) $iLine;
-		$this->_aContext = (array) $aContext;
-		$this->_sBacktrace = (string) $sBacktrace;
+	public function setError(int $severity, string $message, string $fileName, int $line, array $context, string $backtrace): FatalMailFormater
+	{
+		$this->severity = $severity;
+		$this->message = $message;
+		$this->fileName = $fileName;
+		$this->line = $line;
+		$this->context = $context;
+		$this->backtrace = $backtrace;
 		return $this;
 	}
 
@@ -237,11 +241,11 @@ class FatalMailFormater {
 	 *
 	 * @return $this
 	 */
-	public function send() {
-		foreach ($this->_aEmails as $sEmail) {
-			mail($sEmail, $this->_sSubject, $this->_htmlFullMessage(), $this->_getMailHeader());
+	public function send(): FatalMailFormater
+	{
+		foreach ($this->emails as $email) {
+			mail($email, $this->subject, $this->htmlFullMessage(), $this->_getMailHeader());
 		}
 		return $this;
 	}
-
 }

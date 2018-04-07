@@ -2,6 +2,7 @@
 namespace Coercive\Utility\FatalNotifyer;
 
 use Closure;
+use Exception;
 use ErrorException;
 use Coercive\Utility\FatalNotifyer\Exceptions\CompileErrorException;
 use Coercive\Utility\FatalNotifyer\Exceptions\CoreErrorException;
@@ -29,30 +30,31 @@ use Coercive\Utility\FatalNotifyer\Exceptions\WarningException;
  */
 class FatalNotifyer
 {
-	/** @var array Handlers */
-	private $_aHandleError = [];
+	/** @var array Is error in handled list */
+	private $handled = [];
 
-	/** @var array Custom */
+	/** @var array Custom handler function list */
 	private $custom = [];
 
-	/** @var array Error Save Datas */
-	private $_aSaveError = [];
+	/** @var array Save error in personal log */
+	private $log = [];
 
-	/** @var array Email Notify */
-	private $_aNotifyDests = [];
+	/** @var array Dests emails to notify */
+	private $notify = [];
 
-	/** @var array Destinatory */
-	private $_aDests = [];
+	/** @var array Dests emails for full datas */
+	private $dests = [];
 
-	/** @var string */
-	private $_sSubject = 'Coercive\\FatalNotifyer Reporting System';
+	/** @var string Emails subject */
+	private $subject = 'Coercive\\FatalNotifyer Reporting System';
 
 	/**
 	 * DEFINE FATAL ERROR
 	 *
 	 * @return void
 	 */
-	private function _defineFatalError() {
+	private function defineFatalError()
+	{
 		if(defined('E_FATAL')) { return; }
 		define('E_FATAL',  E_ERROR | E_USER_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR);
 	}
@@ -60,119 +62,122 @@ class FatalNotifyer
 	/**
 	 * ERROR LEVEL TO TEXT
 	 *
-	 * @param int $iSeverity
+	 * @param int $severity
 	 * @return string
 	 */
-	private function _errorLevelToText($iSeverity) {
-		switch ($iSeverity) {
+	private function severityToText(int $severity): string
+	{
+		switch ($severity) {
 			/** Fatal run-time errors */
-			case E_ERROR: return "E_ERROR ($iSeverity) : Fatal run-time errors";
+			case E_ERROR: return "E_ERROR ($severity) : Fatal run-time errors";
 			/** Run-time warnings (non-fatal errors) */
-			case E_WARNING: return "E_WARNING ($iSeverity) : Run-time warnings (non-fatal errors)";
+			case E_WARNING: return "E_WARNING ($severity) : Run-time warnings (non-fatal errors)";
 			/** Compile-time parse errors */
-			case E_PARSE: return "E_PARSE ($iSeverity) : Compile-time parse errors";
+			case E_PARSE: return "E_PARSE ($severity) : Compile-time parse errors";
 			/** Run-time notices */
-			case E_NOTICE: return "E_NOTICE ($iSeverity) : Run-time notices";
+			case E_NOTICE: return "E_NOTICE ($severity) : Run-time notices";
 			/** Fatal errors that occur during PHP's initial startup */
-			case E_CORE_ERROR: return "E_CORE_ERROR ($iSeverity) : Fatal errors that occur during PHP's initial startup";
+			case E_CORE_ERROR: return "E_CORE_ERROR ($severity) : Fatal errors that occur during PHP's initial startup";
 			/** Warnings (non-fatal errors) that occur during PHP's initial startup */
-			case E_CORE_WARNING: return "E_CORE_WARNING ($iSeverity) : Warnings (non-fatal errors) that occur during PHP's initial startup";
+			case E_CORE_WARNING: return "E_CORE_WARNING ($severity) : Warnings (non-fatal errors) that occur during PHP's initial startup";
 			/** Fatal compile-time errors (Zend) */
-			case E_COMPILE_ERROR: return "E_COMPILE_ERROR ($iSeverity) : Fatal compile-time errors (Zend)";
+			case E_COMPILE_ERROR: return "E_COMPILE_ERROR ($severity) : Fatal compile-time errors (Zend)";
 			/** Compile-time warnings (non-fatal errors) */
-			case E_COMPILE_WARNING: return "E_COMPILE_WARNING ($iSeverity) : Compile-time warnings (non-fatal errors)";
+			case E_COMPILE_WARNING: return "E_COMPILE_WARNING ($severity) : Compile-time warnings (non-fatal errors)";
 			/** User-generated error message */
-			case E_USER_ERROR: return "E_USER_ERROR ($iSeverity) : User-generated error message";
+			case E_USER_ERROR: return "E_USER_ERROR ($severity) : User-generated error message";
 			/** User-generated warning message */
-			case E_USER_WARNING: return "E_USER_WARNING ($iSeverity) : User-generated warning message";
+			case E_USER_WARNING: return "E_USER_WARNING ($severity) : User-generated warning message";
 			/** User-generated notice message */
-			case E_USER_NOTICE: return "E_USER_NOTICE ($iSeverity) : User-generated notice message";
+			case E_USER_NOTICE: return "E_USER_NOTICE ($severity) : User-generated notice message";
 			/** PHP suggest changes to your code */
-			case E_STRICT: return "E_STRICT ($iSeverity) : PHP suggest changes to your code";
+			case E_STRICT: return "E_STRICT ($severity) : PHP suggest changes to your code";
 			/** Catchable fatal error */
-			case E_RECOVERABLE_ERROR: return "E_RECOVERABLE_ERROR ($iSeverity) : Catchable fatal error";
+			case E_RECOVERABLE_ERROR: return "E_RECOVERABLE_ERROR ($severity) : Catchable fatal error";
 			/** Run-time notices */
-			case E_DEPRECATED: return "E_DEPRECATED ($iSeverity) : Run-time notices";
+			case E_DEPRECATED: return "E_DEPRECATED ($severity) : Run-time notices";
 			/** User-generated warning message */
-			case E_USER_DEPRECATED: return "E_USER_DEPRECATED ($iSeverity) : User-generated warning message";
+			case E_USER_DEPRECATED: return "E_USER_DEPRECATED ($severity) : User-generated warning message";
 			/** Unknown error */
-			default: return "Undefined ($iSeverity) : Unknown error";
+			default: return "Undefined ($severity) : Unknown error";
 		}
 	}
 
 	/**
 	 * THROW ERROR
 	 *
-	 * @param int $iSeverity
-	 * @param string $sMessage
-	 * @param string $sFileName
-	 * @param int $iLine
-	 * @param array $aContext [optional]
+	 * @param int $severity
+	 * @param string $message
+	 * @param string $fileName
+	 * @param int $line
+	 * @param array $context [optional]
 	 * @return void
 	 * @throws ErrorException
 	 */
-	private function _throwError($iSeverity, $sMessage, $sFileName, $iLine, $aContext = []) {
-		switch ($iSeverity) {
+	private function throwException(int $severity, string $message, string $fileName, int $line, array $context = [])
+	{
+		switch ($severity) {
 			/** Fatal run-time errors */
 			case E_ERROR:
-				throw new ErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new ErrorException($message, 0, $severity, $fileName, $line);
 			/** Run-time warnings (non-fatal errors) */
 			case E_WARNING:
-				throw new WarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new WarningException($message, 0, $severity, $fileName, $line);
 			/** Compile-time parse errors */
 			case E_PARSE:
-				throw new ParseException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new ParseException($message, 0, $severity, $fileName, $line);
 			/** Run-time notices */
 			case E_NOTICE:
-				throw new NoticeException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new NoticeException($message, 0, $severity, $fileName, $line);
 			/** Fatal errors that occur during PHP's initial startup */
 			case E_CORE_ERROR:
-				throw new CoreErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new CoreErrorException($message, 0, $severity, $fileName, $line);
 			/** Warnings (non-fatal errors) that occur during PHP's initial startup */
 			case E_CORE_WARNING:
-				throw new CoreWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new CoreWarningException($message, 0, $severity, $fileName, $line);
 			/** Fatal compile-time errors (Zend) */
 			case E_COMPILE_ERROR:
-				throw new CompileErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new CompileErrorException($message, 0, $severity, $fileName, $line);
 			/** Compile-time warnings (non-fatal errors) */
 			case E_COMPILE_WARNING:
-				throw new CoreWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new CoreWarningException($message, 0, $severity, $fileName, $line);
 			/** User-generated error message */
 			case E_USER_ERROR:
-				throw new UserErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new UserErrorException($message, 0, $severity, $fileName, $line);
 			/** User-generated warning message */
 			case E_USER_WARNING:
-				throw new UserWarningException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new UserWarningException($message, 0, $severity, $fileName, $line);
 			/** User-generated notice message */
 			case E_USER_NOTICE:
-				throw new UserNoticeException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new UserNoticeException($message, 0, $severity, $fileName, $line);
 			/** PHP suggest changes to your code */
 			case E_STRICT:
-				throw new StrictException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new StrictException($message, 0, $severity, $fileName, $line);
 			/** Catchable fatal error */
 			case E_RECOVERABLE_ERROR:
-				throw new RecoverableErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new RecoverableErrorException($message, 0, $severity, $fileName, $line);
 			/** Run-time notices */
 			case E_DEPRECATED:
-				throw new DeprecatedException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new DeprecatedException($message, 0, $severity, $fileName, $line);
 			/** User-generated warning message */
 			case E_USER_DEPRECATED:
-				throw new UserDeprecatedException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new UserDeprecatedException($message, 0, $severity, $fileName, $line);
 			/** Unknown error */
 			default:
-				throw new ErrorException($sMessage, 0, $iSeverity, $sFileName, $iLine);
+				throw new ErrorException($message, 0, $severity, $fileName, $line);
 		}
 	}
 
 	/**
 	 * HANDLE ERROR
 	 *
-	 * @param int $iSeverity
+	 * @param int $severity
 	 * @return bool
 	 */
-	private function _isHandledError($iSeverity) {
-		foreach ($this->_aHandleError as $iErrorType) {
-			if($iSeverity & $iErrorType) {
+	private function isHandledError(int $severity): bool
+	{
+		foreach ($this->handled as $errorType) {
+			if($severity & $errorType) {
 				return true;
 			}
 		}
@@ -184,16 +189,15 @@ class FatalNotifyer
 	 *
 	 * @return void
 	 */
-	private function _handleError() {
-
+	private function handleError()
+	{
 		# Singleload
-		static $bAlreadyPrepared = false;
-		if($bAlreadyPrepared) { return; }
-		$bAlreadyPrepared = true;
+		static $single = false;
+		if($single) { return; }
+		$single = true;
 
 		# Set error handler
 		set_error_handler([$this, 'errorHandler']);
-
 	}
 
 	/**
@@ -201,64 +205,30 @@ class FatalNotifyer
 	 *
 	 * @return void
 	 */
-	private function _handleFatal() {
-
+	private function handleFatal()
+	{
 		# Singleload
-		static $bAlreadyPrepared = false;
-		if($bAlreadyPrepared) { return; }
-		$bAlreadyPrepared = true;
+		static $single = false;
+		if($single) { return; }
+		$single = true;
 
 		# Set fatal shutdown handler
 		register_shutdown_function([$this, 'fatalHandler']);
-
 	}
 
 	/**
 	 * INIT HANDLER
 	 *
-	 * @param int $iSeverity
+	 * @param int $severity
 	 * @return void
 	 */
-	private function _initHandler($iSeverity) {
-
+	private function initHandler(int $severity)
+	{
 		# Basic levels
-		$this->_handleError();
+		$this->handleError();
 
 		# Fatal level
-		if($iSeverity & E_FATAL) { $this->_handleFatal(); }
-
-	}
-
-	/**
-	 * FatalNotifyer constructor.
-	 */
-	public function __construct() {
-
-		# const E_FATAL
-		$this->_defineFatalError();
-
-	}
-
-	/**
-	 * DISPLAY ERROR
-	 *
-	 * PHP init display_errors status
-	 *
-	 * @param bool $bStatus
-	 * @return $this
-	 */
-	public function displayError($bStatus) {
-		ini_set('display_errors', $bStatus ? 'on' : 'off');
-		return $this;
-	}
-
-	/**
-	 * GET BACKTRACE
-	 *
-	 * @return string
-	 */
-	public function getBacktrace() {
-		return (string) print_r(debug_backtrace(false), true);
+		if($severity & E_FATAL) { $this->handleFatal(); }
 	}
 
 	/**
@@ -266,8 +236,8 @@ class FatalNotifyer
 	 *
 	 * @return void
 	 */
-	static public function reset() {
-
+	static public function reset()
+	{
 		# Reset error handler
 		restore_error_handler();
 		restore_exception_handler();
@@ -279,74 +249,138 @@ class FatalNotifyer
 		# Default no display and report all
 		ini_set('display_errors', 'off');
 		error_reporting(E_ALL | E_STRICT);
+	}
 
+	/**
+	 * AUTO TEST
+	 *
+	 * @param bool $notice [optional]
+	 * @param bool $warning [optional]
+	 * @param bool $error [optional]
+	 *
+	 * @return void
+	 */
+	static public function autoTest(bool $notice = true, bool $warning = false, bool $error = false)
+	{
+		# (NOTICE)
+		if($notice) {
+			echo __METHOD__ . " ----\nNOTICE\n";
+			trigger_error(__METHOD__ . ' - NOTICE', E_USER_NOTICE);
+		}
+
+		# (WARNING)
+		if($warning) {
+			echo __METHOD__ . " ----\nWARNING\n";
+			trigger_error(__METHOD__ . ' - WARNING', E_USER_WARNING);
+		}
+
+		# (ERROR)
+		if($error) {
+			echo __METHOD__ . " ----\nERROR\n";
+			trigger_error(__METHOD__ . ' - ERROR', E_USER_ERROR);
+		}
+	}
+
+	/**
+	 * FatalNotifyer constructor.
+	 *
+	 * @param int $severity [optional] Report severity
+	 */
+	public function __construct(int $severity = E_ALL | E_STRICT)
+	{
+		# const E_FATAL
+		$this->defineFatalError();
+
+		# Report errors
+		error_reporting($severity);
+	}
+
+	/**
+	 * DISPLAY ERROR
+	 *
+	 * PHP init display_errors status
+	 *
+	 * @param bool $status
+	 * @return $this
+	 */
+	public function displayError(bool $status): FatalNotifyer
+	{
+		ini_set('display_errors', $status ? 'on' : 'off');
+		return $this;
+	}
+
+	/**
+	 * GET BACKTRACE
+	 *
+	 * @return string
+	 */
+	public function getBacktrace(): string
+	{
+		return (string) print_r(debug_backtrace(false), true);
 	}
 
 	/**
 	 * MAIN ERROR HANDLER
 	 *
-	 * @param int $iSeverity
-	 * @param string $sMessage
-	 * @param string $sFileName
-	 * @param int $iLine
-	 * @param array $aContext [optional]
+	 * @param int $severity
+	 * @param string $message
+	 * @param string $fileName
+	 * @param int $line
+	 * @param array $context [optional]
+	 *
 	 * @return bool
+	 *
+	 * @throws Exception
 	 * @throws ErrorException
 	 */
-	public function errorHandler($iSeverity, $sMessage, $sFileName, $iLine, $aContext = []) {
-
+	public function errorHandler(int $severity, string $message, string $fileName, int $line, array $context = []): bool
+	{
 		# This error code is not included in error_reporting
 		# Or error was suppressed with the '@' operator
-		if (!(error_reporting() & $iSeverity)) { return false; }
+		if (!(error_reporting() & $severity)) { return false; }
 
 		# Send notify email if
-		foreach($this->_aNotifyDests as $sEmail => $iErrorType) {
-			if($iErrorType & $iSeverity) {
+		foreach($this->notify as $email => $errorType) {
+			if($errorType & $severity) {
 				(new FatalMailFormater)
-					->setSubject($this->_sSubject)
-					->setEmails(array_keys($this->_aNotifyDests))
-					->setNotifyOnly($this->_errorLevelToText($iSeverity))
+					->setSubject($this->subject)
+					->setEmails([$email])
+					->setNotifyOnly($this->severityToText($severity))
 					->send();
 			}
 		}
 
 		# Send mail if
-		foreach($this->_aDests as $sEmail => $iErrorType) {
-			if($iErrorType & $iSeverity) {
+		foreach($this->dests as $email => $errorType) {
+			if($errorType & $severity) {
 				(new FatalMailFormater)
-					->setSubject($this->_sSubject)
-					->setEmails(array_keys($this->_aDests))
-					->setError($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $this->getBacktrace())
+					->setSubject($this->subject)
+					->setEmails([$email])
+					->setError($severity, $message, $fileName, $line, $context, $this->getBacktrace())
 					->send();
 			}
 		}
 
 		# Save if
-		foreach($this->_aSaveError as $sPath => $iErrorType) {
-			if($iErrorType & $iSeverity) {
-				(new FatalLog($sPath))
-					->save($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $this->getBacktrace());
+		foreach($this->log as $path => $errorType) {
+			if($errorType & $severity) {
+				(new FatalLog($path))
+					->save($severity, $message, $fileName, $line, $context, $this->getBacktrace());
 			}
 		}
 
-		# Launch custom handler
-		if(array_key_exists($iSeverity, $this->custom)) {
-
-			# Exec closure
-			$this->custom[$iSeverity]($iSeverity, $sMessage, $sFileName, $iLine, $aContext, $this->getBacktrace());
-
-			# Don't execute PHP internal error handler
-			return true;
+		# Launch custom handler : Exec closure
+		if(array_key_exists($severity, $this->custom)) {
+			$this->custom[$severity]($severity, $message, $fileName, $line, $context, $this->getBacktrace());
 		}
 
 		# Throw if registered and no custom handler
-		if(self::_isHandledError($iSeverity) ) {
-			$this->_throwError($iSeverity, $sMessage, $sFileName, $iLine, $aContext);
+		elseif(self::isHandledError($severity) ) {
+			$this->throwException($severity, $message, $fileName, $line, $context);
 		}
 
 		# Don't execute PHP internal error handler
 		return true;
-
 	}
 
 	/**
@@ -355,84 +389,61 @@ class FatalNotifyer
 	 * Redirect to classical errorHandler
 	 *
 	 * @return bool
+	 *
+	 * @throws Exception
+	 * @throws ErrorException
 	 */
-	public function fatalHandler() {
-
+	public function fatalHandler(): bool
+	{
 		# Retrieve last error
-		$aError = error_get_last();
-		if(!$aError) { return false; }
+		$error = error_get_last();
+		if(!$error) { return false; }
 
 		# Handle fatal only
-		if(isset($aError['type']) && ($aError['type'] & E_FATAL)) {
-			$this->errorHandler($aError['type'], $aError['message'] ?? '', $aError['file'] ?? '', $aError['line'] ?? '');
+		if(isset($error['type']) && ($error['type'] & E_FATAL)) {
+			$this->errorHandler($error['type'], $error['message'] ?? '', $error['file'] ?? '', $error['line'] ?? '');
 		}
 
 		# Don't execute PHP internal error handler
 		return true;
-
-	}
-
-	/**
-	 * AUTO TEST
-	 *
-	 * @return void
-	 */
-	static public function autoTest() {
-
-		# (NOTICE)
-		echo "----\nNOTICE\n";
-		trigger_error('NOTICE', E_USER_NOTICE);
-
-		# (WARNING)
-		echo "----\nWARNING\n";
-		trigger_error('WARNING', E_USER_WARNING);
-
-		# (FATAL)
-		echo "----\nFATAL\n";
-		trigger_error('FATAL', E_USER_ERROR);
-
 	}
 
 	/**
 	 * SET EMAIL SUBJECT
 	 *
-	 * @param string $sSubject
+	 * @param string $subject
 	 * @return $this
 	 */
-	public function setMailSubject($sSubject) {
-		$this->_sSubject = (string) $sSubject;
+	public function setMailSubject(string $subject): FatalNotifyer
+	{
+		$this->subject = $subject;
 		return $this;
 	}
 
 	/**
 	 * ADD EMAIL
 	 *
-	 * @param array|string $mEmails
-	 * @param int $iSeverity [optional]
+	 * @param array $emails
+	 * @param int $severity [optional]
 	 * @return $this
 	 */
-	public function mail($mEmails, $iSeverity = E_ALL | E_STRICT) {
-
-		# Emails list
-		if(is_string($mEmails)) { $mEmails = [$mEmails]; }
-
+	public function mail(array $emails, int $severity = E_ALL | E_STRICT): FatalNotifyer
+	{
 		# Add Process
-		foreach ($mEmails as $sEmail) {
-
+		foreach ($emails as $email)
+		{
 			# Skip on error
-			if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { continue; }
+			if(!filter_var($email, FILTER_VALIDATE_EMAIL)) { continue; }
 
 			# Set email
-			$this->_aDests[(string) $sEmail] = $iSeverity;
-
+			$this->dests[$email] = $severity;
 		}
 
 		# SET HANDLERS
-		$this->_initHandler($iSeverity);
+		$this->initHandler($severity);
 
 		# Maintain chainability
 		return $this;
-
 	}
 
 	/**
@@ -454,73 +465,63 @@ class FatalNotifyer
 	/**
 	 * REGISTER ERROR HANDLER
 	 *
-	 * @param int $iSeverity [optional]
+	 * @param int $severity [optional]
 	 * @return $this
 	 */
-	public function register($iSeverity = E_ALL | E_STRICT) {
-
-		# Report errors
-		error_reporting($iSeverity);
-
+	public function register(int $severity = E_ALL | E_STRICT): FatalNotifyer
+	{
 		# SET SPECIFIC HANDLER
-		$this->_aHandleError[] = $iSeverity;
+		$this->handled[] = $severity;
 
 		# SET HANDLERS
-		$this->_initHandler($iSeverity);
+		$this->initHandler($severity);
 
 		# Maintain chainability
 		return $this;
-
 	}
 
 	/**
 	 * SAVE
 	 *
-	 * @param string $sDirectoryPath
-	 * @param int $iSeverity [optional]
+	 * @param string $directory
+	 * @param int $severity [optional]
 	 * @return $this
 	 */
-	public function save($sDirectoryPath, $iSeverity = E_ALL | E_STRICT) {
-
+	public function save(string $directory, int $severity = E_ALL | E_STRICT): FatalNotifyer
+	{
 		# SET SPECIFIC SAVE
-		$this->_aSaveError[$sDirectoryPath] = $iSeverity;
+		$this->log[$directory] = $severity;
 
 		# SET HANDLERS
-		$this->_initHandler($iSeverity);
+		$this->initHandler($severity);
 
 		# Maintain chainability
 		return $this;
-
 	}
 
 	/**
 	 * NOTIFY EMAIL ERRORS
 	 *
-	 * @param array|string $mEmails
-	 * @param int $iSeverity [optional]
+	 * @param array $emails
+	 * @param int $severity [optional]
 	 * @return $this
 	 */
-	public function notify($mEmails, $iSeverity = E_ALL | E_STRICT) {
-
-		# Emails list
-		if(is_string($mEmails)) { $mEmails = [$mEmails]; }
-
+	public function notify(array $emails, int $severity = E_ALL | E_STRICT): FatalNotifyer
+	{
 		# Add Process
-		foreach ($mEmails as $sEmail) {
-
+		foreach ($emails as $email)
+		{
 			# Skip on error
-			if(!filter_var($sEmail, FILTER_VALIDATE_EMAIL)) { continue; }
+			if(!filter_var($email, FILTER_VALIDATE_EMAIL)) { continue; }
 
 			# Set email
-			$this->_aNotifyDests[(string) $sEmail] = $iSeverity;
-
+			$this->notify[$email] = $severity;
 		}
 
 		# SET HANDLERS
-		$this->_initHandler($iSeverity);
+		$this->initHandler($severity);
 
 		# Maintain chainability
 		return $this;
-
 	}
 }

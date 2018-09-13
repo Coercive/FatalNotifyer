@@ -326,18 +326,21 @@ class FatalNotifyer
 	 * @param string $message
 	 * @param string $fileName
 	 * @param int $line
-	 * @param array $context [optional]
+	 * @param array|null $context [optional]
 	 *
 	 * @return bool
 	 *
 	 * @throws Exception
 	 * @throws ErrorException
 	 */
-	public function errorHandler(int $severity, string $message, string $fileName, int $line, array $context = []): bool
+	public function errorHandler(int $severity, string $message, string $fileName, int $line, $context = []): bool
 	{
 		# This error code is not included in error_reporting
 		# Or error was suppressed with the '@' operator
 		if (!(error_reporting() & $severity)) { return false; }
+
+		# Handle type because php suck
+		$context = $context ? (array) $context : [];
 
 		# Send notify email if
 		foreach($this->notify as $email => $errorType) {

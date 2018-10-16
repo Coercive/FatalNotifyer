@@ -25,8 +25,8 @@ use Coercive\Utility\FatalNotifyer\Exceptions\WarningException;
  * @link		https://github.com/Coercive/FatalNotifyer
  *
  * @author  	Anthony Moral <contact@coercive.fr>
- * @copyright   (c) 2018 Anthony Moral
- * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
+ * @copyright   2019 Anthony Moral
+ * @license 	MIT
  */
 class FatalNotifyer
 {
@@ -47,6 +47,9 @@ class FatalNotifyer
 
 	/** @var string Emails subject */
 	private $subject = 'Coercive\\FatalNotifyer Reporting System';
+
+	/** @var string */
+	private $from = '';
 
 	/**
 	 * DEFINE FATAL ERROR
@@ -347,6 +350,7 @@ class FatalNotifyer
 			if($errorType & $severity) {
 				(new FatalMailFormater)
 					->setSubject($this->subject)
+					->setFrom($this->from)
 					->setEmails([$email])
 					->setNotifyOnly($this->severityToText($severity))
 					->send();
@@ -358,6 +362,7 @@ class FatalNotifyer
 			if($errorType & $severity) {
 				(new FatalMailFormater)
 					->setSubject($this->subject)
+					->setFrom($this->from)
 					->setEmails([$email])
 					->setError($severity, $message, $fileName, $line, $context, $this->getBacktrace())
 					->send();
@@ -420,6 +425,18 @@ class FatalNotifyer
 	public function setMailSubject(string $subject): FatalNotifyer
 	{
 		$this->subject = $subject;
+		return $this;
+	}
+
+	/**
+	 * SET EMAIL FROM
+	 *
+	 * @param string $from
+	 * @return $this
+	 */
+	public function setMailFrom(string $from): FatalNotifyer
+	{
+		$this->from = $from;
 		return $this;
 	}
 

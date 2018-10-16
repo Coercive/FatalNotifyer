@@ -10,8 +10,8 @@ use DateTime;
  * @link		https://github.com/Coercive/FatalNotifyer
  *
  * @author  	Anthony Moral <contact@coercive.fr>
- * @copyright   (c) 2018 Anthony Moral
- * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
+ * @copyright   2019 Anthony Moral
+ * @license 	MIT
  */
 class FatalMailFormater
 {
@@ -35,6 +35,9 @@ class FatalMailFormater
 
 	/** @var string */
 	private $subject = '---';
+	
+	/** @var string */
+	private $from = '';
 
 	/** @var array */
 	private $emails = [];
@@ -66,7 +69,9 @@ class FatalMailFormater
 	{
 		return
 			"MIME-Version: 1.0\r\n" .
-			"Content-type: text/html; charset=UTF-8\r\n";
+			"Content-type: text/html; charset=UTF-8\r\n" .
+			($this->from ? "From: {$this->from}\r\n" : '') .
+			'X-Mailer: PHP/' . phpversion();
 	}
 
 	/**
@@ -186,6 +191,18 @@ class FatalMailFormater
 	public function setSubject(string $subject): FatalMailFormater
 	{
 		$this->subject = $subject;
+		return $this;
+	}
+
+	/**
+	 * SET FROM
+	 *
+	 * @param string $sSubject
+	 * @return $this
+	 */
+	public function setFrom(string $from): FatalMailFormater
+	{
+		$this->from = (string) filter_var($from, FILTER_VALIDATE_EMAIL);
 		return $this;
 	}
 

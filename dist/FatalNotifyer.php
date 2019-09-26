@@ -377,13 +377,20 @@ class FatalNotifyer
 			}
 		}
 
-		# Launch custom handler : Exec closure
-		if(array_key_exists($severity, $this->custom)) {
-			$this->custom[$severity]($severity, $message, $fileName, $line, $context, $this->getBacktrace());
+		# Launch custom handler
+		foreach ($this->custom as $s => $closure) {
+			if($s & $severity) {
+
+				# Exec closure
+				$closure($severity, $message, $fileName, $line, $context, $this->getBacktrace());
+
+				# Don't execute PHP internal error handler
+				return true;
+			}
 		}
 
 		# Throw if registered and no custom handler
-		elseif(self::isHandledError($severity) ) {
+		if(self::isHandledError($severity) ) {
 			$this->throwException($severity, $message, $fileName, $line, $context);
 		}
 

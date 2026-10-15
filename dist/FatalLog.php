@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace Coercive\Utility\FatalNotifyer;
 
 use DateTime;
@@ -12,17 +14,16 @@ use DirectoryIterator;
  * @link		https://github.com/Coercive/FatalNotifyer
  *
  * @author  	Anthony Moral <contact@coercive.fr>
- * @copyright   (c) 2017 - 2018 Anthony Moral
- * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
+ * @copyright   2017 - 2026 Anthony Moral
+ * @license 	MIT
  */
-class FatalLog
+final class FatalLog
 {
-	/** @var string */
-	private $directory = '';
+	const SEPARATOR = "##########----------LOGSEPARATOR----------##########\r\n";
+
+	private string $directory;
 
 	/**
-	 * CREATE DIRECTORY
-	 *
 	 * @param string $directory
 	 * @return string
 	 * @throws Exception
@@ -30,19 +31,18 @@ class FatalLog
 	private function createDirectory(string $directory): string
 	{
 		# Already exist
-		if(is_dir($directory) && ($path = realpath($directory))) { return $path; }
-
-		# Create
-		if(!@mkdir($directory, 0755, true)) {
-			throw new Exception("Can't create directory in $directory");
+		if(is_dir($directory) && ($path = realpath($directory))) {
+			return $path;
 		}
 
-		# Return path
+		if(!@mkdir($directory, 0755, true) && !is_dir($directory)) {
+			throw new Exception("Can't create directory in $directory");
+		}
 		return (string) realpath($directory);
 	}
 
 	/**
-	 * CREATE SUBDIR
+	 * Create a sub directory like /path/0000-00-00
 	 *
 	 * @param string $directory
 	 * @return string
@@ -50,21 +50,19 @@ class FatalLog
 	 */
 	private function createSubDir(string $directory): string
 	{
-		# Prepare sub dir like /path/0000-00-00
 		$path = $this->directory . DIRECTORY_SEPARATOR . $directory;
-		if(!is_dir($path)) { $this->createDirectory($path); }
+		if(!is_dir($path)) {
+			$this->createDirectory($path);
+		}
 
-		# Verify
 		$real = realpath($path);
-		if(!$real || !is_dir($real)) { throw new Exception("Is not directory in $path"); }
-
-		# Return path
+		if(!$real || !is_dir($real)) {
+			throw new Exception("Is not directory in $path");
+		}
 		return $real;
 	}
 
 	/**
-	 * TO STRING
-	 *
 	 * @param array $array
 	 * @return string
 	 */
@@ -74,18 +72,6 @@ class FatalLog
 	}
 
 	/**
-	 * GET LOG SEPARATOR
-	 *
-	 * @return string
-	 */
-	private function getLogSeparator(): string
-	{
-		return "##########----------LOGSEPARATOR----------##########\r\n";
-	}
-
-	/**
-	 * FORMAT ERROR
-	 *
 	 * @param int $severity
 	 * @param string $message
 	 * @param string $fileName
@@ -96,39 +82,23 @@ class FatalLog
 	 */
 	private function formatError(int $severity, string $message, string $fileName, int $line, array $context, string $backtrace): string
 	{
-		try {
-			$log = json_encode([
-				'severity' => $severity,
-				'message' => $message,
-				'filename' => $fileName,
-				'line' => $line,
-				'context' => $context,
-				'backtrace' => $backtrace,
+		return (string) json_encode([
+			'severity' => $severity,
+			'message' => $message,
+			'filename' => $fileName,
+			'line' => $line,
+			'context' => $context,
+			'backtrace' => $backtrace,
 
-				'GET' => $this->printArray($_SERVER ?? []),
-				'POST' => $this->printArray($_POST ?? []),
-				'FILE' => $this->printArray($_FILES ?? []),
-				'SERVER' => $this->printArray($_SERVER ?? []),
-				'SESSION' => $this->printArray($_SESSION ?? [])
-			]);
-		}
-		catch (Exception $e) {
-			$log = json_encode([
-				'severity' => $e->getCode(),
-				'message' => $e->getMessage(),
-				'filename' => $e->getFile(),
-				'line' => $e->getLine(),
-				'context' => $e->getTrace(),
-				'backtrace' => $e->getTraceAsString()
-			]);
-		}
-
-		return $log;
+			'GET' => $this->printArray($_GET ?? []),
+			'POST' => $this->printArray($_POST ?? []),
+			'FILE' => $this->printArray($_FILES ?? []),
+			'SERVER' => $this->printArray($_SERVER ?? []),
+			'SESSION' => $this->printArray($_SESSION ?? []),
+		], JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
 	}
 
 	/**
-	 * WRITE LOG
-	 *
 	 * @param string $log
 	 * @param string $path
 	 * @param string $file
@@ -136,58 +106,33 @@ class FatalLog
 	 */
 	private function write(string $log, string $path, string $file): bool
 	{
-		try {
-			# Open or create file
-			$fp = fopen($path . DIRECTORY_SEPARATOR . $file,'a+');
-			if(!$fp) { throw new Exception("Can't create log file in " . $path . DIRECTORY_SEPARATOR . $file); }
-
-			# Place pointer at the end
-			fseek($fp,SEEK_END);
-
-			# Prepare new line text
-			$line = "{$this->getLogSeparator()}{$log}\r\n";
-
-			# Save in log file
-			fputs($fp, $line);
-
-			# Close log file
-			fclose($fp);
-
-			# ok status
-			return true;
-		}
-		catch (Exception $e) { return false; }
+		return false !== @file_put_contents($path . DIRECTORY_SEPARATOR . $file, self::SEPARATOR . $log . "\r\n", FILE_APPEND | LOCK_EX);
 	}
 
 	/**
-	 * LOG FILE TO ARRAY
+	 * Log file to array
 	 *
 	 * @param string $path
 	 * @return array
 	 */
 	private function read(string $path): array
 	{
-		# No file
-		if(!is_file($path)) { return []; }
-
-		try {
-			# Open file
-			$fp = fopen($path, 'r+');
-
-			# Tranform all lines un array
-			$results = []; $i = 0;
-			while($line = fgets($fp)) {
-				if(strpos($line,  $this->getLogSeparator()) === 0) { $i++; continue; }
-				$results[$i] = json_decode($line, true);
-			}
-
-			# Close log file
-			fclose($fp);
-
-			# Datas
-			return $results;
+		if(!is_file($path) || !($fp = @fopen($path, 'r'))) {
+			return [];
 		}
-		catch (Exception $e) { return []; }
+
+		$results = [];
+		$i = 0;
+		while(false !== ($line = fgets($fp))) {
+			if(strpos($line, self::SEPARATOR) === 0) {
+				$i++;
+				continue;
+			}
+			$results[$i] = json_decode($line, true);
+		}
+		fclose($fp);
+
+		return $results;
 	}
 
 	/**
@@ -198,41 +143,38 @@ class FatalLog
 	 */
 	public function __construct(string $directory)
 	{
-		$this->directory = $this->createDirectory($directory);;
-		if(!$this->directory) { throw new Exception("Is not directory in $directory"); }
+		$this->directory = $this->createDirectory($directory);
+		if(!$this->directory) {
+			throw new Exception("Is not directory in $directory");
+		}
 	}
 
 	/**
-	 * SAVE LOG
-	 *
 	 * @param int $severity
 	 * @param string $message
 	 * @param string $fileName
 	 * @param int $line
 	 * @param array $context
 	 * @param string $backtrace
-	 * @return FatalLog
+	 * @return $this
 	 * @throws Exception
 	 */
-	public function save(int $severity, string $message, string $fileName, int $line, array $context, string $backtrace): FatalLog
+	public function save(int $severity, string $message, string $fileName, int $line, array $context, string $backtrace): self
 	{
-		# Prepare subdir
 		$date = new DateTime;
 		$directory = $this->createSubDir($date->format('Y-m-d'));
-		if(!$directory) { throw new Exception("Can't create subdirectory."); }
 
-		# Write log
 		$log = $this->formatError($severity, $message, $fileName, $line, $context, $backtrace);
-		$status = $this->write($log, $directory, $date->format('H_i_s'));
-		if(!$status) { throw new Exception("Can't write log datas."); }
-
+		if(!$this->write($log, $directory, $date->format('H_i_s'))) {
+			throw new Exception("Can't write log datas.");
+		}
 		return $this;
 	}
 
 	/**
-	 * GET FILE DATAS
+	 * Errors of a log file
 	 *
-	 * @param string $file
+	 * @param string $file Full path
 	 * @return array
 	 */
 	public function getFile(string $file): array
@@ -241,47 +183,42 @@ class FatalLog
 	}
 
 	/**
-	 * GET FILES LIST
+	 * Files of a day directory
 	 *
-	 * @param string $day
-	 * @return array
+	 * @param string $day Like '2017-07-22'
+	 * @return string[]
 	 */
 	public function getFileList(string $day): array
 	{
-		# Init list
-		$list = [];
+		$path = $this->directory . DIRECTORY_SEPARATOR . $day;
+		if(!is_dir($path)) {
+			return [];
+		}
 
-		# Parse directory
-		$files = new DirectoryIterator($this->directory . DIRECTORY_SEPARATOR . $day);
-		foreach ($files as $file) {
+		$list = [];
+		foreach (new DirectoryIterator($path) as $file) {
 			if ($file->isFile()) {
 				$list[] = $file->getFilename();
 			}
 		}
-
-		# Datas
+		sort($list);
 		return $list;
 	}
 
 	/**
-	 * GET DAYS LIST
+	 * Days directories
 	 *
-	 * @return array
+	 * @return string[]
 	 */
 	public function getDayList(): array
 	{
-		# Init list
 		$list = [];
-
-		# Parse directory
-		$dir = new DirectoryIterator($this->directory);
-		foreach ($dir as $file) {
+		foreach (new DirectoryIterator($this->directory) as $file) {
 			if (!$file->isDot() && $file->isDir()) {
 				$list[] = $file->getFilename();
 			}
 		}
-
-		# Datas
+		rsort($list);
 		return $list;
 	}
 }

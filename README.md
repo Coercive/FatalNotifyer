@@ -1,7 +1,9 @@
 Coercive FatalNotifyer Utility
 ==============================
 
-This class allows you to manage your site's errors with an internal system of exception and notification by email.
+This class allows you to manage your site's errors: convert them to exceptions, handle them yourself, be notified, or save them in a personal log.
+
+Compatible PHP 7.4 → 8.5
 
 Get
 ---
@@ -13,49 +15,59 @@ Usage
 -----
 
 ```php
-
 use Coercive\Utility\FatalNotifyer\FatalNotifyer;
 
-# Instanciate
-$oFatal = new FatalNotifyer;
+# Instanciate (and set error_reporting, E_ALL by default)
+$notifyer = new FatalNotifyer;
 
 # Display errors or not
-$oFatal->displayError(true || false);
+$notifyer->displayError(true || false);
 
-# Set your own email subject, with your project name for example
-$oFatal->setMailSubject('Hello, an error occured on my website');
-
-# Add your email(s) and error list to send
-$oFatal->mail('email_1@email.email');
-$oFatal->mail(['email_2@email.email', 'email_3@email.email']);
-$oFatal->mail('email_4@email.email', E_COMPILE_ERROR);
-$oFatal->mail('email_5@email.email', E_NOTICE | E_USER_NOTICE);
-	// ...
-
-# Or just notify (not the full backtrace but short message)
-$oFatal->notify('email_1@email.email');
-$oFatal->notify(['email_2@email.email', 'email_3@email.email'], E_NOTICE | E_USER_NOTICE);
-
-# Register type error for internal class handle
-$oFatal->register(E_FATAL);
+# Convert errors to exceptions (Exceptions\WarningException, Exceptions\UserNoticeException...)
+$notifyer->register(); // E_ALL
+$notifyer->register(E_FATAL);
 
 	// E_ERROR, E_WARNING, E_PARSE, E_NOTICE, E_CORE_ERROR,
 	// E_CORE_WARNING, E_COMPILE_ERROR, E_COMPILE_WARNING,
-	// E_USER_ERROR:, E_USER_WARNING, E_USER_NOTICE, E_STRICT,
+	// E_USER_ERROR, E_USER_WARNING, E_USER_NOTICE, E_STRICT,
 	// E_RECOVERABLE_ERROR, E_DEPRECATED, E_USER_DEPRECATED
+	// and E_FATAL (or FatalNotifyer::FATAL)
 
-# Save type error in personal file
-$oFatal->save('/my/personal/log/directory/fatal', E_FATAL);
-$oFatal->save('/my/personal/log/directory/notice', E_NOTICE);
-// See after for explore errors datas
+# Handle yourself some errors instead of throwing an exception
+# (exact severity, or bitmask: the exact severity wins)
+$notifyer->custom(E_USER_WARNING, function (int $severity, string $message) {
+	error_log($message);
+});
 
+# Save errors in a personal log (see after to explore it)
+$notifyer->save('/my/personal/log/directory/fatal', E_FATAL);
+$notifyer->save('/my/personal/log/directory/notice', E_NOTICE);
 
 # You can try an autotest for 3 errors type
 FatalNotifyer::autoTest();
 
 # And you have a reset function
 FatalNotifyer::reset();
+```
 
+Notify yourself
+---------------
+
+Add as many listeners as you want, each one for its own severity bitmask. They are called in the order they were added, then the error continues (custom handler, exception...).
+
+The callbacks of `listen()` and `custom()` receive `int $severity, string $message, string $fileName, int $line, array $context, string $backtrace`.
+The backtrace is only built if the callback declares this 6th parameter.
+
+```php
+# Slack for fatal errors
+$notifyer->listen(E_FATAL, function (int $severity, string $message, string $fileName, int $line) {
+	$slack->send(FatalNotifyer::getSeverityName($severity) . " : $message in $fileName:$line");
+});
+
+# Email with the backtrace for warnings
+$notifyer->listen(E_WARNING | E_USER_WARNING, function (int $severity, string $message, string $fileName, int $line, array $context, string $backtrace) {
+	mail('webmaster@email.email', 'Warning', "$message\n\n$backtrace");
+});
 ```
 
 Explore error log
@@ -63,43 +75,27 @@ Explore error log
 ```php
 use Coercive\Utility\FatalNotifyer\FatalLog;
 
-# For example, you can imagine an ajax system that retrieve error list ...
-
 # Load
-$oLog = new FatalLog('/my/personal/log/directory/fatal');
+$log = new FatalLog('/my/personal/log/directory/fatal');
 
-# Retreive days list directories
+# Days list directories (newest first)
 # ['2017-07-22', '2017-07-21', '2017-07-20', ...]
+$days = $log->getDayList();
 
-$aDays = $oLog->getDayList();
+# Files list of a day
+# ['15_14_57', '15_14_58', ...]
+$files = $log->getFileList('2017-07-22');
 
-# Retreive file list by directories
-# ['2017-07-22' => ['15_14_57', '15_14_58', ...], ...]
+# Errors of a file
+$errors = $log->getFile('/my/personal/log/directory/fatal/2017-07-22/15_14_57');
+```
 
-$aLists = [];
-foreach ($aDays as $sDay) {
-	$aLists[$sDay] = $oLog->getFileList($sDay);
-}
+Tests
+-----
 
-# Retrieve one (example)
+PHPUnit 12 requires PHP 8.3+ (the library itself stays compatible with PHP 7.4).
 
-$oLog->getOne("/my/personal/log/directory/fatal/2017-07-22/15_14_57");
-
-# Loop retrieve (example)
-
-$aErrors = [];
-foreach ($aLists as $sDay => $aFiles) {
-	foreach ($aFiles as $sFile) {
-		$aErrors[$sDay . '@' . $sFile] = $oLog->getOne("/my/personal/log/directory/fatal/$sDay/$sFile");
-	}
-}
-
-# See results
-
-echo '<pre>';
-var_dump($aDays);
-var_dump($aLists);
-var_dump($aErrors);
-echo '</pre>';
-
+```
+composer install
+vendor/bin/phpunit
 ```
